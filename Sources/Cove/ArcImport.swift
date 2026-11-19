@@ -1,6 +1,7 @@
 import AppKit
 import CryptoKit
 import Foundation
+import SQLite3
 
 /// Reads Arc's sidebar from disk: spaces, their themes and icons, favorites, pinned tabs, folders and open tabs.
 /// Arc keeps all of it as plain JSON. Cookies and saved passwords are encrypted with a key in the
@@ -259,6 +260,41 @@ struct ArcImportOptions {
     var replaceExisting = false
 }
 
+extension ArcImport {
+    /// One Arc profile's visited pages, read from its Chromium History database.
+    static func history(forProfileKey key: String, folder: URL = arcFolder)
+        -> [(url: URL, title: String, host: String, count: Int, last: Double)] {
+        let src = folder.appendingPathComponent("User Data/\(key)/History")
+        guard FileManager.default.fileExists(atPath: src.path) else { return [] }
+        // Copy it, so a running Arc holding the file open does not block the read.
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clove-arc-history-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        guard (try? FileManager.default.copyItem(at: src, to: tmp)) != nil else { return [] }
+
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(tmp.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_close(db) }
+        var stmt: OpaquePointer?
+        let sql = "SELECT url, title, visit_count, last_visit_time FROM urls " +
+                  "WHERE visit_count > 0 ORDER BY visit_count DESC LIMIT 3000;"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var out: [(url: URL, title: String, host: String, count: Int, last: Double)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let c0 = sqlite3_column_text(stmt, 0), let url = URL(string: String(cString: c0)),
+                  let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { continue }
+            let title = sqlite3_column_text(stmt, 1).map { String(cString: $0) } ?? ""
+            let count = Int(sqlite3_column_int(stmt, 2))
+            // Chromium stores time as microseconds since 1601-01-01; shift to the Unix epoch.
+            let last = Double(sqlite3_column_int64(stmt, 3)) / 1_000_000 - 11_644_473_600
+            out.append((url, title.isEmpty ? (url.host ?? "") : title, url.host ?? "", count, max(last, 0)))
+        }
+        return out
+    }
+}
+
 extension BrowserStore {
     func apply(_ plan: ArcImport, options: ArcImportOptions) {
         func tab(_ record: ArcImport.Tab) -> BrowserTab {
@@ -272,8 +308,11 @@ extension BrowserStore {
         }
 
         var imported: [Space] = []
+        // Arc profile folder name to our profile, so history lands in the right one.
+        var profileKeys: [String: UUID] = [:]
         for (index, record) in plan.spaces.enumerated() where options.chosen.contains(index) {
             let id = ArcImport.profileID(for: record.profileKey)
+            profileKeys[record.profileKey] = id
             let profile: Profile
             if let existing = profiles.first(where: { $0.id == id }) {
                 profile = existing
@@ -288,6 +327,12 @@ extension BrowserStore {
                                   today: options.includeToday ? record.today.map(tab) : []))
         }
         guard !imported.isEmpty else { return }
+
+        // Bring each imported profile's visited pages into the command bar's history.
+        for (key, id) in profileKeys {
+            let entries = ArcImport.history(forProfileKey: key)
+            if !entries.isEmpty { history.importEntries(entries, profile: id) }
+        }
 
         if options.replaceExisting {
             spaces.forEach { space in space.ownTabs.forEach { $0.unload() } }

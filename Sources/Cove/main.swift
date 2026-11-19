@@ -131,6 +131,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             print("history hits for 'developer':", web.count)
             exit(hits.count == 1 && hits.first?.count == 2 ? 0 : 1)
         }
+        if args.contains("--arc-history-check") {
+            for key in ["Default", "Profile 1", "Profile 2", "Profile 4"] {
+                let entries = ArcImport.history(forProfileKey: key)
+                let topCount = entries.first?.count ?? 0
+                print("\(key): \(entries.count) pages, top visit count \(topCount)")
+            }
+            exit(0)
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
