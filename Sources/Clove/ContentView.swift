@@ -77,11 +77,14 @@ private struct SpaceScene: View {
             RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .fill(theme.card)
                 .shadow(color: store.fullScreen ? .clear : .black.opacity(0.22), radius: 6, y: 1)
-            if let webView = space.selected?.webView {
-                WebContainer(webView: webView, radius: cardRadius)
-                    .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
-                    .id(space.id)
-                    .transition(.opacity)
+            if let split = space.splitTab, let left = space.selected?.webView, let right = split.webView {
+                HStack(spacing: 6) {
+                    pane(left)
+                    pane(right).overlay(alignment: .topTrailing) { splitCloseButton }
+                }
+                .id(space.id)
+            } else if let webView = space.selected?.webView {
+                pane(webView).id(space.id).transition(.opacity)
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -92,6 +95,23 @@ private struct SpaceScene: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: store.finding)
+        .animation(.easeOut(duration: 0.18), value: space.splitTab != nil)
+    }
+
+    private func pane(_ webView: WKWebView) -> some View {
+        WebContainer(webView: webView, radius: cardRadius)
+            .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
+    }
+
+    private var splitCloseButton: some View {
+        Button { store.closeSplit() } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(.white, .black.opacity(0.4))
+                .padding(8)
+        }
+        .buttonStyle(.plain)
+        .help("Close split")
     }
 
     /// With the sidebar hidden, touching the left edge slides it in over the page.

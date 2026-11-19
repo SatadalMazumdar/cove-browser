@@ -578,6 +578,9 @@ struct TabRow: View {
         .contextMenu {
             Button(store.isPinned(tab) ? "Unpin Tab" : "Pin Tab") { store.togglePin(tab) }
             Button("Add to Favorites") { store.addToFavorites(tab) }
+            if tab !== space.selected {
+                Button("Show in Split View") { store.splitWith(tab) }
+            }
             let folders = space.folders
             if !folders.isEmpty {
                 Menu("Move to Folder") {

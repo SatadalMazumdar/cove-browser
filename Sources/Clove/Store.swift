@@ -605,6 +605,7 @@ final class BrowserStore: ObservableObject {
         // Each space showing this tab moves to the tab that takes its place in the list.
         let showing = spaces.filter { $0.selected === tab }
         let positions = showing.map { $0.allTabs.firstIndex { $0 === tab } ?? 0 }
+        for s in spaces where s.splitTab === tab { s.splitTab = nil }
         _ = detach(tab.id)
         for (space, position) in zip(showing, positions) {
             let remaining = space.allTabs
@@ -876,6 +877,24 @@ final class BrowserStore: ObservableObject {
                      sharing: profiles.first { $0.id == draft.profileID })
         }
         closePanel()
+    }
+
+    // MARK: Split view
+
+    /// Shows a tab beside the selected one in the current space.
+    func splitWith(_ tab: BrowserTab) {
+        guard tab !== space.selected else { return }
+        tab.lastActive = Date()
+        tab.ensureWebView()
+        space.splitTab = tab
+    }
+
+    func closeSplit() {
+        space.splitTab = nil
+    }
+
+    var canSplit: Bool {
+        space.splitTab == nil && space.allTabs.contains { $0 !== space.selected }
     }
 
     // MARK: Mini windows

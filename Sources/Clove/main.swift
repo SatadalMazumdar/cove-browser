@@ -166,6 +166,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 exit(mini != nil ? 0 : 1)
             }
         }
+        if args.contains("--split-check") {
+            window.ignoresMouseEvents = true
+            let others = store.space.allTabs.filter { $0 !== store.selectedTab }
+            if let second = others.first { store.splitWith(second) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                let split = self.store.space.splitTab
+                print("split set:", split != nil,
+                      "left loaded:", self.store.selectedTab?.webView != nil,
+                      "right loaded:", split?.webView != nil)
+                exit(split?.webView != nil ? 0 : 1)
+            }
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
@@ -260,6 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item("Reader Mode", #selector(toggleReader), "r", [.command, .shift]),
             item("Picture in Picture", #selector(pictureInPicture), "p", [.command, .shift]),
             item("Open in Mini Window", #selector(openInMini), "o", [.command, .shift]),
+            item("Close Split View", #selector(closeSplit)),
             .separator(),
             item("Zoom In", #selector(zoomIn), "="),
             item("Zoom Out", #selector(zoomOut), "-"),
@@ -308,6 +321,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func openInMini() {
         if let url = store.selectedTab?.url { store.openMini(url: url) }
     }
+    @objc private func closeSplit() { store.closeSplit() }
     @objc private func pictureInPicture() {
         // Toggles PiP on the first video, if the page has one. Web video also drives the macOS
         // media keys and Now Playing through WebKit without any extra wiring.

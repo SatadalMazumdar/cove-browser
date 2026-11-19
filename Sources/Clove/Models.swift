@@ -407,6 +407,8 @@ final class Space: ObservableObject, Identifiable {
     @Published var pinned: [Node]
     @Published var today: [BrowserTab]
     @Published var selected: BrowserTab?
+    /// The page shown beside the selected one in split view, or nil for a single page.
+    @Published var splitTab: BrowserTab?
     /// When true the pinned tabs and folders are folded away, leaving the favorites and today's tabs.
     @Published var pinnedCollapsed: Bool
 
