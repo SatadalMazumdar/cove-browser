@@ -156,6 +156,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
         }
+        if args.contains("--mini-check") {
+            window.ignoresMouseEvents = true
+            store.openMini(url: URL(string: "https://example.com/")!)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                let mini = NSApp.windows.first { $0 !== self.window && $0.isVisible }
+                let loaded = (mini?.contentView?.subviews.compactMap { $0 as? WKWebView }.first)?.url != nil
+                print("mini window open:", mini != nil, "loaded a url:", loaded)
+                exit(mini != nil ? 0 : 1)
+            }
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
@@ -249,6 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item("Find on Page", #selector(findOnPage), "f"),
             item("Reader Mode", #selector(toggleReader), "r", [.command, .shift]),
             item("Picture in Picture", #selector(pictureInPicture), "p", [.command, .shift]),
+            item("Open in Mini Window", #selector(openInMini), "o", [.command, .shift]),
             .separator(),
             item("Zoom In", #selector(zoomIn), "="),
             item("Zoom Out", #selector(zoomOut), "-"),
@@ -294,6 +305,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func toggleSidebar() { store.sidebarVisible.toggle() }
     @objc private func findOnPage() { store.openFind() }
     @objc private func toggleReader() { store.selectedTab?.toggleReader() }
+    @objc private func openInMini() {
+        if let url = store.selectedTab?.url { store.openMini(url: url) }
+    }
     @objc private func pictureInPicture() {
         // Toggles PiP on the first video, if the page has one. Web video also drives the macOS
         // media keys and Now Playing through WebKit without any extra wiring.

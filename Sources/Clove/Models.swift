@@ -199,6 +199,14 @@ extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // Option-click opens the link in a mini window for a quick look.
+        if navigationAction.navigationType == .linkActivated,
+           navigationAction.modifierFlags.contains(.option),
+           let target = navigationAction.request.url {
+            store?.openMini(url: target, profile: profile)
+            decisionHandler(.cancel)
+            return
+        }
         // Cmd-click opens the link in a background tab.
         if navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags.contains(.command),

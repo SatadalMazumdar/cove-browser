@@ -111,6 +111,8 @@ final class BrowserStore: ObservableObject {
 
     /// Files downloaded from any page, shared across tabs and profiles.
     let downloads = DownloadManager()
+    /// Open Little-Arc-style mini windows, held so they stay alive until closed.
+    private var miniWindows: [MiniWindow] = []
     /// Visited pages, for command bar suggestions.
     let history: History
     var dragging: DragItem?
@@ -874,6 +876,18 @@ final class BrowserStore: ObservableObject {
                      sharing: profiles.first { $0.id == draft.profileID })
         }
         closePanel()
+    }
+
+    // MARK: Mini windows
+
+    /// Opens a link in a small floating window on the given profile, or the current one.
+    func openMini(url: URL, profile: Profile? = nil) {
+        let mini = MiniWindow(url: url, profile: profile ?? space.profile, store: self)
+        miniWindows.append(mini)
+    }
+
+    func miniClosed(_ mini: MiniWindow) {
+        miniWindows.removeAll { $0 === mini }
     }
 
     // MARK: Find on page
