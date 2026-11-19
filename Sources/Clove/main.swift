@@ -202,6 +202,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             print("cleaned up:", pm.credentials(for: host).isEmpty)
             exit(ok ? 0 : 1)
         }
+        if args.contains("--userscript-check") {
+            UserscriptStore.shared.scripts.append(
+                Userscript(name: "probe", match: "example.com", code: "document.title = 'injected';"))
+            let generated = UserscriptStore.shared.wkUserScripts()
+            let source = generated.last?.source ?? ""
+            print("userscript generated:", !generated.isEmpty,
+                  "host-gated:", source.contains("example.com"),
+                  "has code:", source.contains("document.title"))
+            UserscriptStore.shared.scripts.removeAll { $0.name == "probe" }  // not saved, no file touched
+            exit(source.contains("example.com") && source.contains("document.title") ? 0 : 1)
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true

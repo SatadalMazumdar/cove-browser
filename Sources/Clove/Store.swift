@@ -72,6 +72,7 @@ enum Panel {
     case space(SpaceDraft)
     case arcImport(ArcImportDraft)
     case settings
+    case userscripts
 }
 
 @MainActor
@@ -171,6 +172,7 @@ final class BrowserStore: ObservableObject {
         ContentBlocker.shared.onReady = { [weak self] in self?.applyBlocking() }
         ContentBlocker.shared.prepare()
         PasswordManager.shared.enabled = passwordsEnabled
+        UserscriptStore.shared.onChange = { [weak self] in self?.reapplyUserscripts() }
         if let saved {
             spaceIndex = min(max(saved.spaceIndex, 0), spaces.count - 1)
             pagePosition = Double(spaceIndex)
@@ -917,6 +919,20 @@ final class BrowserStore: ObservableObject {
 
     func miniClosed(_ mini: MiniWindow) {
         miniWindows.removeAll { $0 === mini }
+    }
+
+    func openUserscripts() {
+        commandBar = nil
+        panel = .userscripts
+    }
+
+    /// Re-injects the userscripts into every open page and reloads, so an edit takes effect at once.
+    func reapplyUserscripts() {
+        for tab in everyTab {
+            guard let webView = tab.webView else { continue }
+            WebScripts.populate(webView.configuration.userContentController)
+            webView.reload()
+        }
     }
 
     // MARK: Find on page

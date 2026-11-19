@@ -388,9 +388,8 @@ final class Profile: ObservableObject, Identifiable {
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         config.mediaTypesRequiringUserActionForPlayback = []
         config.allowsAirPlayForMediaPlayback = true
-        // Clove's password manager: a script that offers to save logins and fills saved ones.
-        config.userContentController.addUserScript(
-            WKUserScript(source: PasswordManager.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        // Clove's injected scripts: the password helper plus any userscripts, and the save-message handler.
+        WebScripts.populate(config.userContentController)
         config.userContentController.add(PasswordManager.shared, name: "clovePasswords")
         return config
     }

@@ -47,6 +47,7 @@ struct SidebarView: View {
                 Divider()
                 Button("Import from Arc...") { store.openArcImport() }
                 Divider()
+                Button("Userscripts...") { store.openUserscripts() }
                 Button("Settings...") { store.openSettings() }
             } label: {
                 Image(systemName: "plus")

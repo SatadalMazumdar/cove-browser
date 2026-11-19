@@ -65,6 +65,7 @@ struct PanelHost: View {
                 case .space(let draft): SpaceEditor(store: store, draft: draft)
                 case .arcImport(let draft): ArcImportPanel(store: store, draft: draft)
                 case .settings: SettingsPanel(store: store)
+                case .userscripts: UserscriptsPanel(store: store)
                 }
             }
             .padding(22)
@@ -498,4 +499,104 @@ struct SettingsPanel: View {
     private var sleepBinding: Binding<TimeInterval> {
         Binding(get: { store.idleSeconds }, set: { store.setIdle($0) })
     }
+}
+
+// MARK: - Userscripts
+
+struct UserscriptsPanel: View {
+    @ObservedObject var store: BrowserStore
+    @ObservedObject var scripts = UserscriptStore.shared
+    @Local private var selected: UUID?
+
+    private var current: Int? { scripts.scripts.firstIndex { $0.id == selected } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PanelTitle(text: "Userscripts")
+            Text("Custom JavaScript that runs on matching sites. Clove's stand-in for extensions.")
+                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+
+            HStack(alignment: .top, spacing: 12) {
+                // The list of scripts.
+                VStack(spacing: 2) {
+                    ForEach(scripts.scripts) { script in
+                        row(script)
+                    }
+                    Button { scripts.add(); selected = scripts.scripts.last?.id } label: {
+                        Label("Add Script", systemImage: "plus")
+                            .font(.system(size: 12, weight: .medium)).foregroundStyle(.white.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10).frame(height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+                }
+                .frame(width: 160)
+                .frame(maxHeight: 280)
+
+                // The editor for the selected script.
+                if let index = current {
+                    editor(index)
+                } else {
+                    Text("Select a script, or add one.")
+                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(height: 300)
+
+            HStack {
+                Spacer()
+                PanelButton(title: "Done", primary: true) { store.closePanel() }
+            }
+        }
+        .frame(width: 560)
+    }
+
+    private func row(_ script: Userscript) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(script.enabled ? Color.green.opacity(0.8) : .white.opacity(0.2)).frame(width: 6, height: 6)
+            Text(script.name).font(.system(size: 12)).foregroundStyle(.white.opacity(0.9)).lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, 10).frame(height: 30)
+        .background(selected == script.id ? .white.opacity(0.1) : .clear,
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture { selected = script.id }
+    }
+
+    private func editor(_ index: Int) -> some View {
+        let binding = $scripts.scripts[index]
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                TextField("Name", text: binding.name)
+                    .textFieldStyle(.plain).font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+                    .padding(.horizontal, 8).frame(height: 28)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 7))
+                Toggle("", isOn: binding.enabled).toggleStyle(.switch).labelsHidden()
+            }
+            HStack(spacing: 6) {
+                Text("Runs on").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
+                TextField("*  or  example.com", text: binding.match)
+                    .textFieldStyle(.plain).font(.system(size: 12)).foregroundStyle(.white)
+                    .padding(.horizontal, 8).frame(height: 26)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 7))
+            }
+            TextEditor(text: binding.code)
+                .font(.system(size: 12, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
+            HStack {
+                Button("Delete") { let s = scripts.scripts[index]; selected = nil; scripts.delete(s) }
+                    .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.red.opacity(0.9))
+                Spacer()
+                Button("Save and Apply") { scripts.save() }
+                    .buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundStyle(theme.accent)
+            }
+        }
+    }
+
+    @Environment(\.theme) private var theme
 }
