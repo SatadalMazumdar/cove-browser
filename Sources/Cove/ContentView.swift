@@ -7,20 +7,20 @@ struct ContentView: View {
 
     var body: some View {
         SpaceScene(store: store, space: store.space)
-            .environment(\.theme, Theme(hue: blendedHue, dark: colorScheme == .dark))
+            .environment(\.theme, blendedTheme)
             .ignoresSafeArea()
     }
 }
 
 extension ContentView {
     /// Mid-swipe, the window tint sits between the two spaces' colours.
-    var blendedHue: Double {
+    var blendedTheme: Theme {
         let last = Double(store.spaces.count - 1)
         let position = min(max(store.pagePosition, 0), last)
         let lower = Int(position.rounded(.down))
         let upper = min(lower + 1, store.spaces.count - 1)
-        let fraction = position - Double(lower)
-        return store.spaces[lower].hue + (store.spaces[upper].hue - store.spaces[lower].hue) * fraction
+        return Theme.between(store.spaces[lower].theme, store.spaces[upper].theme,
+                             fraction: position - Double(lower), systemDark: colorScheme == .dark)
     }
 }
 
@@ -53,9 +53,15 @@ private struct SpaceScene: View {
                 CommandBar(store: store)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
+
+            if let panel = store.panel {
+                PanelHost(store: store, panel: panel)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
         }
         .animation(.easeOut(duration: 0.2), value: store.sidebarVisible)
         .animation(.easeOut(duration: 0.12), value: store.commandBar != nil)
+        .animation(.easeOut(duration: 0.12), value: store.panel != nil)
         .animation(.easeOut(duration: 0.18), value: store.peeking)
         .onChange(of: store.sidebarVisible) { _, _ in store.peeking = false }
     }

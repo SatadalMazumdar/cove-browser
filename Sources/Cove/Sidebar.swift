@@ -35,24 +35,68 @@ struct SidebarView: View {
             Spacer()
             HStack(spacing: 4) {
                 ForEach(Array(store.spaces.enumerated()), id: \.element.id) { index, item in
-                    // Brightness follows the swipe, so the icons cross-fade under the fingers.
-                    let nearness = max(0, 1 - abs(store.pagePosition - Double(index)))
-                    Button { store.switchSpace(to: index) } label: {
-                        Image(systemName: item.symbol)
-                            .font(.system(size: 12))
-                            .foregroundStyle(theme.text.opacity(0.3 + 0.6 * nearness))
-                            .scaleEffect(1 + 0.12 * nearness)
-                            .frame(width: 26, height: 26)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(item.name)
+                    SpaceButton(store: store, space: item, index: index,
+                                marked: store.dropTarget == .space(item.id))
                 }
             }
             Spacer()
-            IconButton(symbol: "plus") { store.openCommandBar(.newTab) }
+            Menu {
+                Button("New Tab") { store.openCommandBar(.newTab) }
+                Button("New Folder") { store.newFolder() }
+                Button("New Space...") { store.openSpaceEditor() }
+                Divider()
+                Button("Import from Arc...") { store.openArcImport() }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.text.opacity(0.7))
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .frame(width: 28, height: 26)
         }
         .frame(height: 40)
+    }
+}
+
+/// One space's icon in the bottom bar. Click to switch, drag to reorder, drop a tab on it to move the tab.
+private struct SpaceButton: View {
+    let store: BrowserStore
+    @ObservedObject var space: Space
+    let index: Int
+    let marked: Bool
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        // Brightness follows the swipe, so the icons cross-fade under the fingers.
+        let nearness = max(0, 1 - abs(store.pagePosition - Double(index)))
+        SpaceIcon(icon: space.icon)
+            .foregroundStyle(theme.text)
+            .opacity(0.3 + 0.6 * nearness)
+            .scaleEffect(1 + 0.12 * nearness)
+            .frame(width: 26, height: 26)
+            .background(marked ? theme.text.opacity(0.18) : .clear,
+                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .contentShape(Rectangle())
+            .onTapGesture { store.switchSpace(to: index) }
+            .help(space.name)
+            .dragSource(.space(space.id), store: store)
+            .dropTarget(.space(space.id), store: store)
+            .contextMenu { SpaceMenu(store: store, space: space) }
+    }
+}
+
+private struct SpaceMenu: View {
+    let store: BrowserStore
+    let space: Space
+
+    var body: some View {
+        Button("Edit Space...") { store.openSpaceEditor(editing: space) }
+        Button("New Space...") { store.openSpaceEditor() }
+        Divider()
+        Button("Delete Space...") { store.confirmDelete(space) }
+            .disabled(store.spaces.count < 2)
     }
 }
 
@@ -92,41 +136,31 @@ private struct SpaceColumn: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 2) {
-                favorites
+                FavoritesGrid(store: store, profile: space.profile, selected: space.selected)
                 spaceTitle
-                ForEach(space.pinned) { tab in row(tab) }
-                ForEach(space.folders) { folder in
-                    FolderView(folder: folder, store: store, selected: space.selected)
+                ForEach(space.pinned) { node in
+                    NodeRow(node: node, store: store, space: space, depth: 0)
                 }
                 divider
                 newTabRow
-                ForEach(space.today) { tab in row(tab) }
+                ForEach(space.today) { tab in
+                    TabRow(tab: tab, store: store, space: space, isSelected: space.selected === tab,
+                           marked: store.dropTarget == .before(tab.id))
+                }
+                // Room under the last tab, so a drag can land at the end of the list.
+                Color.clear
+                    .frame(height: 80)
+                    .contentShape(Rectangle())
+                    .dropTarget(.todayEnd(space: space.id), store: store)
             }
             .padding(.top, 10)
             .padding(.horizontal, Metrics.gutter)
         }
     }
 
-    private func row(_ tab: BrowserTab) -> some View {
-        TabRow(tab: tab, store: store, isSelected: space.selected === tab)
-    }
-
-    @ViewBuilder private var favorites: some View {
-        if !space.favorites.isEmpty {
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(space.favorites) { tab in
-                    FavoriteTile(tab: tab, store: store, isSelected: space.selected === tab)
-                }
-            }
-            .padding(.bottom, 10)
-        }
-    }
-
     private var spaceTitle: some View {
         HStack(spacing: 7) {
-            Image(systemName: space.symbol)
-                .font(.system(size: 11, weight: .semibold))
+            SpaceIcon(icon: space.icon, size: 11)
             Text(space.name)
                 .font(.system(size: 12, weight: .semibold))
             Spacer()
@@ -134,11 +168,19 @@ private struct SpaceColumn: View {
         .foregroundStyle(theme.secondary)
         .padding(.horizontal, 10)
         .frame(height: 28)
+        .contentShape(Rectangle())
+        .contextMenu {
+            SpaceMenu(store: store, space: space)
+            Divider()
+            Button("New Folder") { store.newFolder() }
+        }
+        .dropTarget(space.pinned.first.map { .before($0.id) } ?? .pinnedEnd(space: space.id), store: store)
     }
 
     private var divider: some View {
-        HStack(spacing: 8) {
-            Rectangle().fill(theme.faint).frame(height: 1)
+        let marked = store.dropTarget == .pinnedEnd(space: space.id)
+        return HStack(spacing: 8) {
+            Rectangle().fill(marked ? theme.accent : theme.faint).frame(height: marked ? 2 : 1)
             if dividerHover && !space.today.isEmpty {
                 Button("Clear") { store.clearToday() }
                     .buttonStyle(.plain)
@@ -150,6 +192,7 @@ private struct SpaceColumn: View {
         .frame(height: 18)
         .contentShape(Rectangle())
         .onHover { dividerHover = $0 }
+        .dropTarget(.pinnedEnd(space: space.id), store: store)
     }
 
     private var newTabRow: some View {
@@ -163,6 +206,76 @@ private struct SpaceColumn: View {
             }
             .foregroundStyle(theme.secondary)
             .padding(.horizontal, 10)
+        }
+        .insertionMark(store.dropTarget == .todayStart(space: space.id), edge: .bottom)
+        .dropTarget(.todayStart(space: space.id), store: store)
+    }
+}
+
+/// The profile's favorites. Every space on the profile shows the same grid.
+private struct FavoritesGrid: View {
+    @ObservedObject var store: BrowserStore
+    @ObservedObject var profile: Profile
+    let selected: BrowserTab?
+
+    var body: some View {
+        if !profile.favorites.isEmpty {
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(profile.favorites) { tab in
+                    FavoriteTile(tab: tab, store: store, isSelected: selected === tab,
+                                 marked: store.dropTarget == .before(tab.id))
+                }
+            }
+            .padding(.bottom, 10)
+        }
+    }
+}
+
+// MARK: - Drag and drop
+
+/// Sidebar drags carry this type, so text dragged out of a web page never counts as a tab.
+let coveDragType = "dev.prototype.cove.item"
+
+private struct SidebarDrop: DropDelegate {
+    let store: BrowserStore
+    let target: DropTarget
+
+    func validateDrop(info: DropInfo) -> Bool { store.canDrop(on: target) }
+    func dropEntered(info: DropInfo) { if store.canDrop(on: target) { store.dropTarget = target } }
+    func dropExited(info: DropInfo) { if store.dropTarget == target { store.dropTarget = nil } }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let item = store.dragging else { return false }
+        return store.drop(item, on: target)
+    }
+}
+
+extension View {
+    func dragSource(_ item: DragItem, store: BrowserStore) -> some View {
+        onDrag {
+            store.dragging = item
+            let provider = NSItemProvider()
+            provider.registerDataRepresentation(forTypeIdentifier: coveDragType, visibility: .ownProcess) { done in
+                done(Data(), nil)
+                return nil
+            }
+            return provider
+        }
+    }
+
+    func dropTarget(_ target: DropTarget, store: BrowserStore) -> some View {
+        onDrop(of: [coveDragType], delegate: SidebarDrop(store: store, target: target))
+    }
+
+    /// The line that shows where a dragged row will land.
+    func insertionMark(_ shown: Bool, edge: VerticalEdge = .top) -> some View {
+        overlay(alignment: edge == .top ? .top : .bottom) {
+            if shown {
+                Capsule().fill(Color.accentColor).frame(height: 2).padding(.horizontal, 6)
+                    .offset(y: edge == .top ? -2 : 2)
+            }
         }
     }
 }
@@ -286,7 +399,9 @@ private struct HoverRow<Content: View>: View {
 struct TabRow: View {
     @ObservedObject var tab: BrowserTab
     let store: BrowserStore
+    let space: Space
     let isSelected: Bool
+    var marked = false
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -309,8 +424,28 @@ struct TabRow: View {
             .padding(.leading, 10)
             .padding(.trailing, 6)
         })
+        .insertionMark(marked)
+        .dragSource(.node(tab.id), store: store)
+        .dropTarget(.before(tab.id), store: store)
         .contextMenu {
             Button(store.isPinned(tab) ? "Unpin Tab" : "Pin Tab") { store.togglePin(tab) }
+            Button("Add to Favorites") { store.addToFavorites(tab) }
+            let folders = space.folders
+            if !folders.isEmpty {
+                Menu("Move to Folder") {
+                    ForEach(folders) { folder in
+                        Button(folder.name) { store.drop(.node(tab.id), on: .intoFolder(folder.id)) }
+                    }
+                }
+            }
+            let others = store.spaces.filter { $0 !== space }
+            if !others.isEmpty {
+                Menu("Move to Space") {
+                    ForEach(others) { other in
+                        Button(other.name) { store.drop(.node(tab.id), on: .space(other.id)) }
+                    }
+                }
+            }
             Button("Copy Link") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(tab.url.absoluteString, forType: .string)
@@ -368,6 +503,7 @@ private struct FavoriteTile: View {
     @ObservedObject var tab: BrowserTab
     let store: BrowserStore
     let isSelected: Bool
+    let marked: Bool
     @Environment(\.theme) private var theme
     @Local private var hover = false
 
@@ -377,39 +513,72 @@ private struct FavoriteTile: View {
             .shadow(color: isSelected ? theme.selectedShadow : .clear, radius: 2, y: 1)
             .frame(height: 48)
             .overlay { FaviconView(tab: tab, size: 18) }
+            .overlay(alignment: .leading) {
+                if marked { Capsule().fill(Color.accentColor).frame(width: 2).padding(.vertical, 6).offset(x: -4) }
+            }
             .contentShape(Rectangle())
             .onTapGesture { store.select(tab) }
             .onHover { hover = $0 }
             .help(tab.title)
+            .dragSource(.node(tab.id), store: store)
+            .dropTarget(.before(tab.id), store: store)
             .contextMenu {
+                Button("Move to Pinned Tabs") { store.togglePin(tab) }
                 Button("Remove from Favorites") { store.close(tab) }
             }
     }
 }
 
+/// A tab row or a folder, at any depth in the pinned area.
+private struct NodeRow: View {
+    let node: Node
+    @ObservedObject var store: BrowserStore
+    @ObservedObject var space: Space
+    let depth: Int
+
+    var body: some View {
+        switch node {
+        case .tab(let tab):
+            TabRow(tab: tab, store: store, space: space, isSelected: space.selected === tab,
+                   marked: store.dropTarget == .before(tab.id))
+                .padding(.leading, CGFloat(depth) * 14)
+        case .folder(let folder):
+            FolderView(folder: folder, store: store, space: space, depth: depth)
+        }
+    }
+}
+
 private struct FolderView: View {
     @ObservedObject var folder: TabFolder
-    let store: BrowserStore
-    let selected: BrowserTab?
+    @ObservedObject var store: BrowserStore
+    let space: Space
+    let depth: Int
     @Environment(\.theme) private var theme
 
     var body: some View {
         VStack(spacing: 2) {
-            HoverRow(action: { withAnimation(.easeOut(duration: 0.16)) { folder.expanded.toggle() } }) {
+            HoverRow(isSelected: store.dropTarget == .intoFolder(folder.id),
+                     action: { withAnimation(.easeOut(duration: 0.16)) { folder.expanded.toggle() } }) {
                 HStack(spacing: 9) {
                     Image(systemName: folder.expanded ? "folder.fill" : "folder")
                         .font(.system(size: 13))
                         .frame(width: 16, height: 16)
-                    Text(folder.name).font(.system(size: 13))
-                    Spacer()
+                    Text(folder.name).font(.system(size: 13)).lineLimit(1)
+                    Spacer(minLength: 0)
                 }
                 .foregroundStyle(theme.text.opacity(0.78))
                 .padding(.horizontal, 10)
             }
+            .padding(.leading, CGFloat(depth) * 14)
+            .dragSource(.node(folder.id), store: store)
+            .dropTarget(.intoFolder(folder.id), store: store)
+            .contextMenu {
+                Button("Rename Folder...") { store.rename(folder) }
+                Button("Delete Folder, Keep Tabs") { store.delete(folder) }
+            }
             if folder.expanded {
-                ForEach(folder.tabs) { tab in
-                    TabRow(tab: tab, store: store, isSelected: selected === tab)
-                        .padding(.leading, 16)
+                ForEach(folder.children) { child in
+                    NodeRow(node: child, store: store, space: space, depth: depth + 1)
                 }
             }
         }

@@ -35,7 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }.store(in: &bag)
 
-        NSApp.mainMenu = buildMenu()
+        // Space names and order show in the menu bar, so it follows them.
+        store.$revision.removeDuplicates().sink { [weak self] _ in
+            DispatchQueue.main.async { NSApp.mainMenu = self?.buildMenu() }
+        }.store(in: &bag)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -43,6 +46,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let flag = args.firstIndex(of: "--url"), args.indices.contains(flag + 1),
            let url = URL(string: args[flag + 1]) {
             store.newTab(url: url)
+        }
+        // Someone arriving from Arc sees the import offer before the sample tabs.
+        if store.startedFromSeed, store.persist, ArcImport.isAvailable {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self.store.openArcImport() }
+        }
+        if args.contains("--arc-check") { runArcCheck(apply: args.contains("--apply")) }
+        if args.contains("--move-check") { runMoveCheck() }
+        if let flag = args.firstIndex(of: "--panel"), args.indices.contains(flag + 1) {
+            switch args[flag + 1] {
+            case "new": store.openSpaceEditor()
+            case "edit": store.openSpaceEditor(editing: store.space)
+            default: store.openArcImport()
+            }
         }
         if args.contains("--peek") {
             store.sidebarVisible = false
@@ -52,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Opens three more tabs, returns to the first, then reports how many pages stay loaded.
             window.ignoresMouseEvents = true
             let first = store.selectedTab
-            let extras = store.space.pinned + store.space.today.dropFirst()
+            let extras = store.space.pinned.flatMap(\.tabs).prefix(2) + store.space.today.dropFirst()
             extras.forEach { store.select($0) }
             if let first { store.select(first) }
             print("loaded at start:", store.loadedTabCount)
@@ -130,6 +146,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item("New Tab", #selector(newTab), "t"),
             item("Open Location", #selector(openLocation), "l"),
             .separator(),
+            item("New Folder", #selector(newFolder), "n", [.command, .shift]),
+            item("New Space...", #selector(newSpace), "n", [.command, .control]),
+            item("Import from Arc...", #selector(importFromArc)),
+            .separator(),
             item("Close Tab", #selector(closeTab), "w"),
         ])
         menu("Edit", [
@@ -166,8 +186,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item("Next Space", #selector(nextSpace), right, [.command, .option]),
             item("Previous Space", #selector(previousSpace), left, [.command, .option]),
             .separator(),
+            item("Edit Space...", #selector(editSpace)),
+            item("Delete Space...", #selector(deleteSpace)),
+            .separator(),
         ] + store.spaces.enumerated().map { index, space in
-            item(space.name, #selector(switchSpace(_:)), "\(index + 1)", .control, tag: index)
+            item(space.name, #selector(switchSpace(_:)), index < 9 ? "\(index + 1)" : "", .control, tag: index)
         })
         menu("Window", [
             item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"),
@@ -188,6 +211,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func previousTab() { store.cycle(-1) }
     @objc private func togglePin() { if let tab = store.selectedTab { store.togglePin(tab) } }
     @objc private func switchSpace(_ sender: NSMenuItem) { store.switchSpace(to: sender.tag) }
+    @objc private func newFolder() { store.newFolder() }
+    @objc private func newSpace() { store.openSpaceEditor() }
+    @objc private func editSpace() { store.openSpaceEditor(editing: store.space) }
+    @objc private func deleteSpace() { store.confirmDelete(store.space) }
+    @objc private func importFromArc() { store.openArcImport() }
     @objc private func nextSpace() { store.stepSpace(1) }
     @objc private func previousSpace() { store.stepSpace(-1) }
 
@@ -209,7 +237,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// `--drm-check` asks the engine which DRM key systems it offers, prints the answer, and quits.
     private func runDRMCheck() {
-        let webView = WKWebView(frame: .zero, configuration: store.space.makeConfiguration())
+        let webView = WKWebView(frame: .zero, configuration: store.space.profile.makeConfiguration())
         probe = webView
         webView.loadHTMLString("<!doctype html><title>probe</title>", baseURL: URL(string: "https://example.com/"))
         let js = """
@@ -244,6 +272,83 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// `--arc-check` reads Arc's sidebar and prints counts only, never titles or addresses.
+    /// With `--apply` it also loads the result into this window, replacing the sample spaces.
+    private func runArcCheck(apply: Bool) {
+        do {
+            let plan = try ArcImport.read()
+            for profile in plan.profiles {
+                print("profile:", profile.favorites.count, "favorites")
+            }
+            for space in plan.spaces {
+                print("space:", space.pinnedTabCount, "pinned,", space.folderCount, "folders,", space.today.count,
+                      "open, icon", space.icon, "hue", (space.theme.hue * 100).rounded() / 100,
+                      "intensity", (space.theme.intensity * 100).rounded() / 100, space.theme.mode.rawValue)
+            }
+            if apply {
+                store.apply(plan, options: ArcImportOptions(chosen: Set(plan.spaces.indices), replaceExisting: true))
+                print("after import:", store.spaces.count, "spaces,", store.profiles.count, "profiles,",
+                      store.everyTab.count, "tabs,", store.loadedTabCount, "loaded")
+            } else {
+                exit(0)
+            }
+        } catch {
+            print("arc check failed:", error.localizedDescription)
+            exit(1)
+        }
+    }
+
+    /// `--move-check` runs the drag and drop rules on the sample tabs and prints what failed.
+    private func runMoveCheck() {
+        window.ignoresMouseEvents = true
+        var failures = 0
+        func expect(_ label: String, _ condition: Bool) {
+            if !condition { failures += 1 }
+            print(condition ? "ok  " : "FAIL", label)
+        }
+        let personal = store.spaces[0], work = store.spaces[1]
+        guard case .tab(let hackerNews) = personal.pinned[0], case .folder(let reading) = personal.pinned[2] else {
+            print("FAIL sample tabs changed shape")
+            exit(1)
+        }
+        let wikipedia = personal.today[0], apple = personal.today[1]
+
+        store.drop(.node(apple.id), on: .before(wikipedia.id))
+        expect("reorder inside today", personal.today.first === apple)
+        store.drop(.node(apple.id), on: .intoFolder(reading.id))
+        expect("today tab into a folder", reading.children.last?.id == apple.id && personal.today.count == 1)
+        store.drop(.node(reading.id), on: .before(hackerNews.id))
+        expect("folder to the top of pinned", personal.pinned.first?.id == reading.id)
+        expect("folder refuses today", !store.drop(.node(reading.id), on: .todayStart(space: personal.id)))
+        expect("folder refuses itself", !store.drop(.node(reading.id), on: .intoFolder(reading.id)))
+        store.drop(.node(hackerNews.id), on: .favoritesEnd(profile: personal.profile.id))
+        expect("pinned tab to favorites", personal.profile.favorites.last === hackerNews && store.isFavorite(hackerNews))
+        store.togglePin(hackerNews)
+        expect("favorite back to pinned", personal.pinned.last?.id == hackerNews.id)
+
+        let before = wikipedia.webView != nil
+        store.drop(.node(wikipedia.id), on: .space(work.id))
+        expect("tab to another space", work.today.first === wikipedia && wikipedia.profile === work.profile)
+        expect("page dropped on profile change", before && wikipedia.webView == nil)
+        expect("old space picked another tab", personal.selected != nil && personal.selected !== wikipedia)
+
+        store.drop(.space(work.id), on: .space(personal.id))
+        expect("space reorder keeps the current space", store.spaces.first === work && store.space === personal)
+
+        let shared = store.addSpace(name: "Shared", icon: "🧪", theme: SpaceTheme(hue: 0.1), sharing: personal.profile)
+        expect("shared space uses the same profile", shared.profile === personal.profile && store.profiles.count == 2)
+        expect("shared space shows the profile's favorites", shared.allTabs.count == personal.profile.favorites.count)
+        let fresh = store.addSpace(name: "Fresh", icon: "🚀", theme: SpaceTheme(), sharing: nil)
+        expect("new profile created", store.profiles.count == 3 && fresh.profile !== personal.profile)
+        store.delete(fresh, eraseProfile: true)
+        expect("delete with erase removes the profile", store.profiles.count == 2 && store.spaces.count == 3)
+        store.delete(reading)
+        expect("deleting a folder keeps its tabs", personal.folders.isEmpty && personal.pinned.contains { $0.id == apple.id })
+
+        print(failures == 0 ? "all checks passed" : "\(failures) checks failed")
+        exit(failures == 0 ? 0 : 1)
+    }
+
     /// `--snapshot <path>` writes a PNG of the window and quits. Used to check layout without a human.
     private func snapshot(to path: String) {
         guard let view = window.contentView,
@@ -253,7 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         func write(_ web: NSImage?, _ frame: NSRect) {
             let image = NSImage(size: view.bounds.size)
             image.lockFocus()
-            if let web, store.commandBar == nil, !store.peeking {
+            if let web, store.commandBar == nil, store.panel == nil, !store.peeking {
                 rep.draw(in: view.bounds)
                 web.draw(in: frame)
             } else {

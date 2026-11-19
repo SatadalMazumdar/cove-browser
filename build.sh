@@ -28,6 +28,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSAppTransportSecurity</key>
     <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+    <key>UTExportedTypeDeclarations</key>
+    <array><dict>
+        <key>UTTypeIdentifier</key><string>dev.prototype.cove.item</string>
+        <key>UTTypeDescription</key><string>Cove sidebar item</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+    </dict></array>
     <key>NSCameraUsageDescription</key><string>A website wants to use your camera.</string>
     <key>NSMicrophoneUsageDescription</key><string>A website wants to use your microphone.</string>
 </dict>

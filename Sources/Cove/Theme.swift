@@ -1,18 +1,69 @@
 import SwiftUI
 
+/// What a space stores about its look. `Theme` turns this into colours.
+struct SpaceTheme: Codable, Equatable {
+    enum Mode: String, Codable, CaseIterable { case auto, light, dark }
+
+    var hue: Double = 0.72
+    /// The gradient's far corner. Nil means a small shift from `hue`.
+    var secondHue: Double?
+    /// 0 is nearly grey, 1 is saturated.
+    var intensity: Double = 0.5
+    var mode: Mode = .auto
+
+    var resolvedSecondHue: Double {
+        secondHue ?? (hue + 0.07).truncatingRemainder(dividingBy: 1)
+    }
+
+    func isDark(system: Bool) -> Bool {
+        mode == .auto ? system : mode == .dark
+    }
+}
+
 /// Colours for one space. The whole window is tinted with the space's hue.
 struct Theme {
     var hue: Double = 0.72
+    var secondHue: Double = 0.79
+    var intensity: Double = 0.5
     var dark: Bool = true
 
+    init() {}
+
+    init(_ theme: SpaceTheme, systemDark: Bool) {
+        hue = theme.hue
+        secondHue = theme.resolvedSecondHue
+        intensity = theme.intensity
+        dark = theme.isDark(system: systemDark)
+    }
+
+    /// The tint part of the way through a swipe from one space to the next.
+    static func between(_ a: SpaceTheme, _ b: SpaceTheme, fraction: Double, systemDark: Bool) -> Theme {
+        var theme = Theme()
+        theme.hue = mixHue(a.hue, b.hue, fraction)
+        theme.secondHue = mixHue(a.resolvedSecondHue, b.resolvedSecondHue, fraction)
+        theme.intensity = a.intensity + (b.intensity - a.intensity) * fraction
+        theme.dark = (fraction < 0.5 ? a : b).isDark(system: systemDark)
+        return theme
+    }
+
+    /// Hue is a circle, so the blend takes the short way round.
+    private static func mixHue(_ a: Double, _ b: Double, _ fraction: Double) -> Double {
+        var delta = b - a
+        if delta > 0.5 { delta -= 1 }
+        if delta < -0.5 { delta += 1 }
+        let mixed = a + delta * fraction
+        return mixed - mixed.rounded(.down)
+    }
+
+    private var strength: Double { 0.4 + 1.2 * intensity }
+
     var backgroundTop: Color {
-        dark ? Color(hue: hue, saturation: 0.42, brightness: 0.24)
-             : Color(hue: hue, saturation: 0.20, brightness: 0.96)
+        dark ? Color(hue: hue, saturation: min(1, 0.42 * strength), brightness: 0.24)
+             : Color(hue: hue, saturation: min(1, 0.20 * strength), brightness: 0.96)
     }
     var backgroundBottom: Color {
-        let shifted = (hue + 0.07).truncatingRemainder(dividingBy: 1)
-        return dark ? Color(hue: shifted, saturation: 0.48, brightness: 0.17)
-                    : Color(hue: shifted, saturation: 0.26, brightness: 0.92)
+        dark ? Color(hue: secondHue, saturation: min(1, 0.48 * strength), brightness: 0.17)
+             : Color(hue: secondHue, saturation: min(1, 0.26 * strength), brightness: 0.92)
     }
     var accent: Color { Color(hue: hue, saturation: 0.55, brightness: dark ? 0.85 : 0.65) }
     var text: Color { dark ? .white : .black }
