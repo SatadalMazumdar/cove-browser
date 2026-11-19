@@ -139,6 +139,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             exit(0)
         }
+        if args.contains("--reader-check") {
+            window.ignoresMouseEvents = true
+            let tab = store.selectedTab
+            tab?.load(URL(string: "https://en.wikipedia.org/wiki/WebKit")!)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                tab?.toggleReader()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    tab?.webView?.evaluateJavaScript(
+                        "document.querySelector('main') ? document.querySelectorAll('main p').length : -1") { v, _ in
+                        let paras = (v as? Int) ?? -1
+                        print("reader mode:", tab?.readerMode ?? false, "paragraphs in reader:", paras)
+                        exit(paras > 3 ? 0 : 1)
+                    }
+                }
+            }
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
@@ -230,6 +246,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item("Toggle Sidebar", #selector(toggleSidebar), "s"),
             .separator(),
             item("Find on Page", #selector(findOnPage), "f"),
+            item("Reader Mode", #selector(toggleReader), "r", [.command, .shift]),
             .separator(),
             item("Zoom In", #selector(zoomIn), "="),
             item("Zoom Out", #selector(zoomOut), "-"),
@@ -274,6 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func copyURL() { store.copyURL() }
     @objc private func toggleSidebar() { store.sidebarVisible.toggle() }
     @objc private func findOnPage() { store.openFind() }
+    @objc private func toggleReader() { store.selectedTab?.toggleReader() }
     @objc private func zoomIn() { store.changeZoom(1) }
     @objc private func zoomOut() { store.changeZoom(-1) }
     @objc private func zoomReset() { store.changeZoom(0) }

@@ -456,6 +456,7 @@ private struct HostLabel: View {
 
 private struct NavButtons: View {
     @ObservedObject var tab: BrowserTab
+    @Environment(\.theme) private var theme
 
     var body: some View {
         IconButton(symbol: "arrow.left", enabled: tab.canGoBack) { tab.webView?.goBack() }
@@ -463,6 +464,17 @@ private struct NavButtons: View {
         IconButton(symbol: tab.isLoading ? "xmark" : "arrow.clockwise") {
             if tab.isLoading { tab.webView?.stopLoading() } else { tab.webView?.reload() }
         }
+        Button { tab.toggleReader() } label: {
+            Image(systemName: "doc.plaintext")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(tab.readerMode ? theme.accent : theme.text.opacity(0.7))
+                .frame(width: 28, height: 26)
+                .background(tab.readerMode ? theme.accent.opacity(0.18) : .clear,
+                            in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Reader mode")
     }
 }
 

@@ -18,6 +18,9 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
     @Published var isLoading = false
     @Published var canGoBack = false
     @Published var canGoForward = false
+    @Published var readerMode = false
+    private var readerOrigin: URL?
+    private var pendingReaderLoad = false
 
     /// Created the first time the tab is selected, so pinned tabs cost nothing until opened.
     private(set) var webView: WKWebView?
@@ -118,6 +121,29 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
         ensureWebView().load(URLRequest(url: url))
     }
 
+    /// Switches between the clean reader view and the real page.
+    func toggleReader() {
+        guard let webView else { return }
+        if readerMode {
+            readerMode = false
+            if let origin = readerOrigin { webView.load(URLRequest(url: origin)) }
+            return
+        }
+        let origin = url
+        webView.evaluateJavaScript(Reader.extractionJS) { [weak self] result, _ in
+            guard let self,
+                  let json = result as? String, let data = json.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let html = dict["html"] as? String, html.count > 200 else { return }
+            self.readerOrigin = origin
+            self.pendingReaderLoad = true
+            self.readerMode = true
+            let title = (dict["heading"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? (dict["title"] as? String ?? "")
+            webView.loadHTMLString(Reader.document(title: title, byline: dict["byline"] as? String ?? "",
+                                                   bodyHTML: html), baseURL: origin)
+        }
+    }
+
     // MARK: Favicon
 
     private static func rootIcon(for url: URL) -> URL? {
@@ -156,6 +182,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
 }
 
 extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        // Any navigation that is not our own reader load leaves reader mode.
+        if pendingReaderLoad { pendingReaderLoad = false } else { readerMode = false }
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         // Set the remembered zoom before the page paints, so there is no jump.
         store?.applyZoom(to: self)
