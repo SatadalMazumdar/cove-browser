@@ -100,6 +100,42 @@ private struct SpaceMenu: View {
     }
 }
 
+/// Close, minimize and zoom, drawn to match the system buttons. Used in the floating sidebar,
+/// where the window's own traffic lights are hidden. The symbols appear on hover, as they do natively.
+private struct WindowControls: View {
+    let store: BrowserStore
+    @Local private var hover = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            dot(Color(red: 1, green: 0.37, blue: 0.34), "xmark") { store.window?.performClose(nil) }
+            dot(Color(red: 0.99, green: 0.74, blue: 0.18), "minus") { store.window?.miniaturize(nil) }
+            dot(Color(red: 0.16, green: 0.78, blue: 0.25), "arrow.up.left.and.arrow.down.right") {
+                store.window?.zoom(nil)
+            }
+        }
+        .padding(.leading, 4)
+        .onHover { hover = $0 }
+    }
+
+    private func dot(_ color: Color, _ symbol: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
+                .overlay {
+                    if hover {
+                        Image(systemName: symbol)
+                            .font(.system(size: 7, weight: .black))
+                            .foregroundStyle(.black.opacity(0.55))
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// The part of the sidebar that stays put during a swipe: window controls and the URL pill.
 private struct SidebarHeader: View {
     @ObservedObject var store: BrowserStore
@@ -109,7 +145,13 @@ private struct SidebarHeader: View {
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 2) {
-                if !floating { Spacer().frame(width: 62) }
+                // The real traffic lights hide with the sidebar. The floating sidebar draws its own
+                // in the same spot, so close, minimize and zoom stay reachable while it is open.
+                if floating {
+                    WindowControls(store: store).frame(width: 62, alignment: .leading)
+                } else {
+                    Spacer().frame(width: 62)
+                }
                 IconButton(symbol: "sidebar.left") { store.sidebarVisible.toggle() }
                 Spacer()
                 if let tab = space.selected {
@@ -132,14 +174,17 @@ private struct SpaceColumn: View {
     @ObservedObject var space: Space
     @Environment(\.theme) private var theme
     @Local private var dividerHover = false
+    @Local private var titleHover = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 2) {
                 FavoritesGrid(store: store, profile: space.profile, selected: space.selected)
                 spaceTitle
-                ForEach(space.pinned) { node in
-                    NodeRow(node: node, store: store, space: space, depth: 0)
+                if !space.pinnedCollapsed {
+                    ForEach(space.pinned) { node in
+                        NodeRow(node: node, store: store, space: space, depth: 0)
+                    }
                 }
                 divider
                 newTabRow
@@ -158,18 +203,51 @@ private struct SpaceColumn: View {
         }
     }
 
+    private func toggleCollapsed() {
+        withAnimation(.easeOut(duration: 0.18)) { space.pinnedCollapsed.toggle() }
+        store.scheduleSave()
+    }
+
     private var spaceTitle: some View {
-        HStack(spacing: 7) {
-            SpaceIcon(icon: space.icon, size: 11)
-            Text(space.name)
-                .font(.system(size: 12, weight: .semibold))
-            Spacer()
+        let count = space.pinned.reduce(0) { $0 + $1.tabs.count }
+        // A Button handles the click. onTapGesture on a row that also owns a drop target and a
+        // context menu was being swallowed, so the header looked dead.
+        return Button(action: toggleCollapsed) {
+            HStack(spacing: 7) {
+                if !space.pinned.isEmpty {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .rotationEffect(.degrees(space.pinnedCollapsed ? 0 : 90))
+                        .foregroundStyle(theme.text.opacity(titleHover ? 0.75 : 0.45))
+                        .frame(width: 10)
+                }
+                SpaceIcon(icon: space.icon, size: 11)
+                Text(space.name)
+                    .font(.system(size: 12, weight: .semibold))
+                // When collapsed, a count hints at what is folded away.
+                if space.pinnedCollapsed && count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.text.opacity(0.4))
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(theme.secondary)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .frame(maxWidth: .infinity)
+            .background(titleHover ? theme.hover : .clear,
+                        in: RoundedRectangle(cornerRadius: Metrics.rowRadius, style: .continuous))
+            .contentShape(Rectangle())
         }
-        .foregroundStyle(theme.secondary)
-        .padding(.horizontal, 10)
-        .frame(height: 28)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .onHover { titleHover = $0 }
         .contextMenu {
+            Button(space.pinnedCollapsed ? "Expand Pinned Tabs" : "Collapse Pinned Tabs") {
+                withAnimation(.easeOut(duration: 0.18)) { space.pinnedCollapsed.toggle() }
+                store.scheduleSave()
+            }
+            Divider()
             SpaceMenu(store: store, space: space)
             Divider()
             Button("New Folder") { store.newFolder() }

@@ -339,9 +339,11 @@ final class Space: ObservableObject, Identifiable {
     @Published var pinned: [Node]
     @Published var today: [BrowserTab]
     @Published var selected: BrowserTab?
+    /// When true the pinned tabs and folders are folded away, leaving the favorites and today's tabs.
+    @Published var pinnedCollapsed: Bool
 
     init(name: String, icon: String, theme: SpaceTheme, profile: Profile, id: UUID = UUID(),
-         pinned: [Node] = [], today: [BrowserTab] = []) {
+         pinned: [Node] = [], today: [BrowserTab] = [], pinnedCollapsed: Bool = false) {
         self.id = id
         self.name = name
         self.icon = icon
@@ -349,6 +351,7 @@ final class Space: ObservableObject, Identifiable {
         self.profile = profile
         self.pinned = pinned
         self.today = today
+        self.pinnedCollapsed = pinnedCollapsed
     }
 
     /// Pinned and today's tabs. Favorites are left out because the profile owns them.

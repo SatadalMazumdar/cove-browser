@@ -37,6 +37,8 @@ private struct SavedSpace: Codable {
     var pinned: [SavedNode]
     var today: [SavedTab]
     var selected: UUID?
+    /// Optional so a file written before this field still reads, and so the v1 upgrade can omit it.
+    var pinnedCollapsed: Bool? = nil
 }
 
 private struct SavedSession: Codable {
@@ -155,7 +157,8 @@ enum SessionFile {
                 profiles.append(profile)
             }
             let space = Space(name: record.name, icon: record.icon, theme: record.theme, profile: profile,
-                              id: record.id, pinned: record.pinned.compactMap(node), today: record.today.map(tab))
+                              id: record.id, pinned: record.pinned.compactMap(node), today: record.today.map(tab),
+                              pinnedCollapsed: record.pinnedCollapsed ?? false)
             space.selected = space.allTabs.first { $0.id == record.selected }
             return space
         }
@@ -185,7 +188,8 @@ enum SessionFile {
             spaces: store.spaces.map { space in
                 SavedSpace(id: space.id, name: space.name, icon: space.icon, theme: space.theme,
                            profileID: space.profile.id, pinned: space.pinned.map(record),
-                           today: space.today.map(record), selected: space.selected?.id)
+                           today: space.today.map(record), selected: space.selected?.id,
+                           pinnedCollapsed: space.pinnedCollapsed)
             }
         )
         do {
