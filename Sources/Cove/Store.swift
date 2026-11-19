@@ -72,6 +72,8 @@ final class BrowserStore: ObservableObject {
 
     /// Files downloaded from any page, shared across tabs and profiles.
     let downloads = DownloadManager()
+    /// Visited pages, for command bar suggestions.
+    let history: History
     var dragging: DragItem?
     weak var window: NSWindow?
     /// True when no session file existed, so this launch shows the sample tabs.
@@ -111,6 +113,8 @@ final class BrowserStore: ObservableObject {
 
     init(persist: Bool = true) {
         self.persist = persist
+        // Diagnostic runs do not touch the real history unless a test file is pointed at it.
+        history = History(open: persist || ProcessInfo.processInfo.environment["COVE_HISTORY_FILE"] != nil)
         let saved = persist ? SessionFile.load() : nil
         startedFromSeed = saved == nil
         if let saved {
@@ -803,7 +807,13 @@ final class BrowserStore: ObservableObject {
         let label = isSearch ? text : (url.host ?? text)
         // Searching "active tabs" (or a piece of it) surfaces the command to drill in.
         let command: [Suggestion] = (loaded > 0 && "active tabs".contains(needle)) ? [.activeTabs(loaded)] : []
-        return command + [.go(url, label, isSearch: isSearch)] + matches.prefix(5).map { .tab($0) }
+        let openMatches = matches.prefix(4).map { Suggestion.tab($0) }
+        // Visited pages that are not already an open tab, ranked by the history store.
+        let openURLs = Set(tabs.map(\.url))
+        let fromHistory = history.matches(text, profile: space.profile.id, limit: 5)
+            .filter { !openURLs.contains($0.url) }
+            .map { Suggestion.go($0.url, $0.title, isSearch: false) }
+        return command + [.go(url, label, isSearch: isSearch)] + openMatches + fromHistory
     }
 
     /// Loaded tabs matching the filter typed inside the active-tabs sub-view.

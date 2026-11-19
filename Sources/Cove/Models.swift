@@ -158,6 +158,7 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
 extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         refreshFavicon()
+        if let profile { store?.history.record(url: url, title: title, host: host, profile: profile.id) }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

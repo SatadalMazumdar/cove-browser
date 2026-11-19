@@ -116,6 +116,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
         }
+        if args.contains("--history-check") {
+            window.ignoresMouseEvents = true
+            let pid = store.space.profile.id
+            store.history.record(url: URL(string: "https://developer.mozilla.org/en-US/docs/Web")!,
+                                 title: "MDN Web Docs", host: "developer.mozilla.org", profile: pid)
+            store.history.record(url: URL(string: "https://developer.mozilla.org/en-US/docs/Web")!,
+                                 title: "MDN Web Docs", host: "developer.mozilla.org", profile: pid)
+            store.history.record(url: URL(string: "https://news.ycombinator.com/")!,
+                                 title: "Hacker News", host: "news.ycombinator.com", profile: pid)
+            let hits = store.history.matches("mdn", profile: pid)
+            print("history hits for 'mdn':", hits.count, hits.first.map { "\($0.title) ×\($0.count)" } ?? "")
+            let web = store.history.matches("developer", profile: pid)
+            print("history hits for 'developer':", web.count)
+            exit(hits.count == 1 && hits.first?.count == 2 ? 0 : 1)
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
