@@ -248,6 +248,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .separator(),
             item("Find on Page", #selector(findOnPage), "f"),
             item("Reader Mode", #selector(toggleReader), "r", [.command, .shift]),
+            item("Picture in Picture", #selector(pictureInPicture), "p", [.command, .shift]),
             .separator(),
             item("Zoom In", #selector(zoomIn), "="),
             item("Zoom Out", #selector(zoomOut), "-"),
@@ -293,6 +294,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func toggleSidebar() { store.sidebarVisible.toggle() }
     @objc private func findOnPage() { store.openFind() }
     @objc private func toggleReader() { store.selectedTab?.toggleReader() }
+    @objc private func pictureInPicture() {
+        // Toggles PiP on the first video, if the page has one. Web video also drives the macOS
+        // media keys and Now Playing through WebKit without any extra wiring.
+        let js = """
+        (function () {
+          var v = document.querySelector('video');
+          if (!v) return 'none';
+          if (document.pictureInPictureElement) { document.exitPictureInPicture(); return 'exit'; }
+          if (v.requestPictureInPicture) { v.requestPictureInPicture(); return 'enter'; }
+          return 'unsupported';
+        })();
+        """
+        store.selectedTab?.webView?.evaluateJavaScript(js)
+    }
     @objc private func zoomIn() { store.changeZoom(1) }
     @objc private func zoomOut() { store.changeZoom(-1) }
     @objc private func zoomReset() { store.changeZoom(0) }
