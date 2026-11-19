@@ -147,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let path = args[flag + 1]
             window.ignoresMouseEvents = true
             if args.contains("--command-bar") { store.openCommandBar(.newTab) }
+            if args.contains("--find") { store.openFind(); store.findQuery = "the" }
             if let page = args.firstIndex(of: "--page"), args.indices.contains(page + 1),
                let position = Double(args[page + 1]) {
                 store.pagePosition = position
@@ -220,6 +221,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu("View", [
             item("Toggle Sidebar", #selector(toggleSidebar), "s"),
             .separator(),
+            item("Find on Page", #selector(findOnPage), "f"),
+            .separator(),
             item("Reload", #selector(reload), "r"),
             item("Back", #selector(goBack), "["),
             item("Forward", #selector(goForward), "]"),
@@ -258,6 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func closeTab() { store.closeSelected() }
     @objc private func copyURL() { store.copyURL() }
     @objc private func toggleSidebar() { store.sidebarVisible.toggle() }
+    @objc private func findOnPage() { store.openFind() }
     @objc private func reload() { store.selectedTab?.webView?.reload() }
     @objc private func goBack() { store.selectedTab?.webView?.goBack() }
     @objc private func goForward() { store.selectedTab?.webView?.goForward() }

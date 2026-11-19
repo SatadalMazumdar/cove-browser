@@ -84,6 +84,14 @@ private struct SpaceScene: View {
                     .transition(.opacity)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if store.finding {
+                FindBar(store: store)
+                    .padding(14)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: store.finding)
     }
 
     /// With the sidebar hidden, touching the left edge slides it in over the page.

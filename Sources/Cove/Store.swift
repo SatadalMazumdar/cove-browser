@@ -64,6 +64,9 @@ final class BrowserStore: ObservableObject {
     @Published var highlight = 0
     /// Inside the command bar's active-tabs sub-view.
     @Published var showingActiveTabs = false
+    /// The find-on-page bar.
+    @Published var finding = false
+    @Published var findQuery = ""
     @Published var panel: Panel?
     /// The spot a drag is hovering over, so the sidebar can draw the insertion mark.
     @Published var dropTarget: DropTarget?
@@ -771,6 +774,29 @@ final class BrowserStore: ObservableObject {
                      sharing: profiles.first { $0.id == draft.profileID })
         }
         closePanel()
+    }
+
+    // MARK: Find on page
+
+    func openFind() {
+        guard commandBar == nil, panel == nil else { return }
+        finding = true
+    }
+
+    func closeFind() {
+        finding = false
+        findQuery = ""
+        focusWeb()
+    }
+
+    /// Highlights the next or previous match of the current query on the page.
+    func find(forward: Bool) {
+        guard let webView = selectedTab?.webView, !findQuery.isEmpty else { return }
+        let config = WKFindConfiguration()
+        config.backwards = !forward
+        config.caseSensitive = false
+        config.wraps = true
+        webView.find(findQuery, configuration: config) { _ in }
     }
 
     // MARK: Command bar
