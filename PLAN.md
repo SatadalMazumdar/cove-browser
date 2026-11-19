@@ -7,10 +7,10 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`███████████░░░░░░░░░░` 20 / 37 done (54%)
+`████████████░░░░░░░░` 21 / 36 done (58%)
 
 - Foundation: 15 / 15 ✅
-- Near-term features: 5 / 11
+- Near-term features: 6 / 10
 - Bigger features: 0 / 5
 - Distribution and shipping: 0 / 6
 
@@ -39,11 +39,10 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ✅ Browsing history, feeding the command bar as you type
 - ✅ Find on page (Cmd+F)
 - ✅ Per-site page zoom (Cmd+plus, minus, 0)
+- ✅ Arc history import, feeding the command bar (bookmarks come over as pinned tabs and favorites)
 - 🟢 Reader mode: strip a page to clean text
-- ⬜ A real new-tab page, instead of only the command bar
 - ⬜ Picture in picture and media keys
 - ⬜ Per-site block on and off toggle in the URL pill (blocking is global for now)
-- ⬜ Arc history and bookmarks import (the history store has a bulk import path, not yet wired to Arc's data)
 - ⬜ More settings: default search engine, new-tab behaviour, default theme for new spaces, a global light or dark override
 
 ## Bigger features
@@ -67,7 +66,7 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 1. Finish the rename and bundle-id migration, while it is cheap.
 2. Get Developer ID signing and notarization working end to end.
-3. Reader mode, then the new-tab page.
+3. Reader mode.
 4. The mini window.
 5. Picture in picture, more settings.
 6. Sparkle auto-update and the CI release pipeline.
