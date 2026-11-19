@@ -7,11 +7,11 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`███████████████░░░░░` 26 / 36 done (72%)
+`█████████████████░░░` 31 / 36 done (86%)
 
 - Foundation: 15 / 15 ✅
 - Near-term features: 10 / 10 ✅
-- Bigger features: 0 / 5
+- Bigger features: 5 / 5 ✅
 - Distribution and shipping: 1 / 6
 
 ## Foundation
@@ -47,11 +47,11 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Bigger features
 
-- ⬜ Mini window for links, Little Arc style (parked on request). A small borderless window with just a URL bar, on the current profile, with a promote-to-tab button. Opened from a modifier-click, a menu item, and as the target for popups.
-- ⬜ Passwords and autofill. Unblocked now that the Apple developer license is in hand; still needs a signed, entitled build and a spike of what macOS 27 allows.
-- ⬜ Safari web extensions. Needs signing and a packaging flow.
-- ⬜ Split view, two pages side by side in one space.
-- ⬜ Sync across machines. Needs a backend and end-to-end encryption.
+- ✅ Mini window for links, Little Arc style. Option-click a link, or Cmd+Shift+O, opens a small floating window on the current profile with a promote-to-tab button.
+- ✅ Passwords and autofill. Clove's own keychain store, with a script that offers to save on login and fills on return. A Developer ID signed build makes the keychain access prompt-free.
+- ✅ Extensions, as userscripts: custom JS per site, managed in a panel. Full Safari web extensions need an Xcode app-extension target and signing, which the Command Line Tools build cannot produce, so this is the buildable stand-in.
+- ✅ Split view, two pages side by side in one space.
+- ✅ Sync, via the session file in iCloud Drive, newer-wins. Real CloudKit sync needs entitlements and a container; this is what an unsigned build can do. History and passwords do not sync.
 
 ## Distribution and shipping
 
