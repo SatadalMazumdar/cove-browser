@@ -7,12 +7,12 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`██████████████░░░░░░` 25 / 36 done (69%)
+`███████████████░░░░░` 26 / 36 done (72%)
 
 - Foundation: 15 / 15 ✅
 - Near-term features: 10 / 10 ✅
 - Bigger features: 0 / 5
-- Distribution and shipping: 0 / 6
+- Distribution and shipping: 1 / 6
 
 ## Foundation
 
@@ -58,7 +58,7 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ⬜ Code signing and notarization with the Developer ID, hardened runtime and the web view's entitlements
 - ⬜ DMG packaging with a drag-to-Applications layout
 - ⬜ Sparkle auto-update: an appcast feed, an EdDSA key, and hosting
-- ⬜ Full rename and bundle-id migration. The user-facing name is Clove; the internals (bundle id `dev.prototype.cove`, the `Sources/Cove` folder and target, the `Cove/session.json` folder, the drag type id, the `cove-browser` repo) are still Cove. The storage move needs a one-time migration so tabs are not lost. Do this before anyone installs, since the bundle id is permanent after that.
+- ✅ Full rename and bundle-id migration. Everything internal is Clove now, the bundle id is `dev.clove.browser`, and a first-launch migration copies the old Cove app data plus the WebKit and cookie stores so tabs, history and logins carry over. The GitHub repo is still named `cove-browser`; renaming it is a separate step whenever you want the URL changed.
 - ⬜ CI on a macOS runner that builds, signs, notarizes and attaches the DMG to a release
 - ⬜ Landing page with the logo, a download button and the feature list
 
