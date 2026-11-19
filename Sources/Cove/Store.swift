@@ -40,6 +40,7 @@ enum DropTarget: Equatable {
 enum Panel {
     case space(SpaceDraft)
     case arcImport(ArcImportDraft)
+    case settings
 }
 
 @MainActor
@@ -74,9 +75,11 @@ final class BrowserStore: ObservableObject {
     /// False for diagnostic runs, so a test launch never reads or overwrites the real session.
     let persist: Bool
 
-    /// How long a background tab may sit before its page is unloaded.
-    /// COVE_IDLE_SECONDS overrides it, which is how the unload path gets tested in seconds.
-    static let idleLimit: TimeInterval = {
+    /// How long a background tab may sit before its page is unloaded, 0 to never unload.
+    /// Settings changes it. COVE_IDLE_SECONDS sets the starting value, which is how the path gets tested.
+    @Published var idleSeconds: TimeInterval = BrowserStore.defaultIdle
+
+    static let defaultIdle: TimeInterval = {
         if let text = ProcessInfo.processInfo.environment["COVE_IDLE_SECONDS"], let seconds = TimeInterval(text) {
             return seconds
         }
@@ -112,6 +115,7 @@ final class BrowserStore: ObservableObject {
             spaceIndex = min(max(saved.spaceIndex, 0), spaces.count - 1)
             pagePosition = Double(spaceIndex)
             sidebarVisible = saved.sidebarVisible
+            if let seconds = saved.idleSeconds { idleSeconds = seconds }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -136,7 +140,7 @@ final class BrowserStore: ObservableObject {
             }
         }
 
-        idleTimer = Timer.scheduledTimer(withTimeInterval: min(60, Self.idleLimit / 2), repeats: true) { [weak self] _ in
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.unloadIdleTabs()
                 // Catches what no action announces: new titles, new URLs, folders opened.
@@ -470,9 +474,10 @@ final class BrowserStore: ObservableObject {
     /// Unloads every background tab that has been off screen longer than the limit.
     /// The tab on screen is never touched, and neither is one that is busy.
     func unloadIdleTabs() {
+        guard idleSeconds > 0 else { return }
         let now = Date()
         for tab in everyTab where tab.webView != nil && tab !== selectedTab {
-            if now.timeIntervalSince(tab.lastActive) > Self.idleLimit, !tab.isBusy {
+            if now.timeIntervalSince(tab.lastActive) > idleSeconds, !tab.isBusy {
                 tab.unload()
             }
         }
@@ -667,6 +672,38 @@ final class BrowserStore: ObservableObject {
     func openArcImport() {
         commandBar = nil
         panel = .arcImport(ArcImportDraft(replace: startedFromSeed))
+    }
+
+    func openSettings() {
+        commandBar = nil
+        panel = .settings
+    }
+
+    /// Changes the tab-sleeping delay and runs a sweep so the new value takes effect at once.
+    func setIdle(_ seconds: TimeInterval) {
+        idleSeconds = seconds
+        unloadIdleTabs()
+        scheduleSave()
+    }
+
+    /// Unloads every background tab right now, whatever the delay. The settings panel offers this.
+    func unloadNow() {
+        objectWillChange.send()
+        for tab in everyTab where tab.webView != nil && tab !== selectedTab && !tab.isBusy {
+            tab.unload()
+        }
+    }
+
+    /// Loaded tabs, the ones holding memory. Newest use first. The command bar lists these.
+    var loadedTabs: [BrowserTab] {
+        everyTab.filter { $0.webView != nil }.sorted { $0.lastActive > $1.lastActive }
+    }
+
+    /// Sleeps one tab: frees its page but leaves it in the sidebar to reopen later.
+    func sleep(_ tab: BrowserTab) {
+        guard tab.webView != nil, tab !== selectedTab else { return }
+        objectWillChange.send()
+        tab.unload()
     }
 
     func closePanel() {

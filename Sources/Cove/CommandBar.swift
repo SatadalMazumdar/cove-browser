@@ -27,17 +27,23 @@ struct CommandBar: View {
                 .padding(.horizontal, 18)
                 .frame(height: 58)
 
-                let items = store.suggestions
-                if !items.isEmpty {
-                    Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-                    VStack(spacing: 2) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            SuggestionRow(item: item, isHighlighted: index == store.highlight)
-                                .onTapGesture { store.run(item) }
-                                .onHover { if $0 { store.highlight = index } }
+                // Empty bar shows the tabs holding memory, each with sleep and close. Typing
+                // switches back to search and open-tab suggestions.
+                if store.query.trimmingCharacters(in: .whitespaces).isEmpty {
+                    activeTabs
+                } else {
+                    let items = store.suggestions
+                    if !items.isEmpty {
+                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+                        VStack(spacing: 2) {
+                            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                                SuggestionRow(item: item, isHighlighted: index == store.highlight)
+                                    .onTapGesture { store.run(item) }
+                                    .onHover { if $0 { store.highlight = index } }
+                            }
                         }
+                        .padding(8)
                     }
-                    .padding(8)
                 }
             }
             .frame(width: 680)
@@ -55,6 +61,96 @@ struct CommandBar: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { DispatchQueue.main.async { focused = true } }
         .onChange(of: store.query) { _, _ in store.highlight = 0 }
+    }
+
+    @ViewBuilder private var activeTabs: some View {
+        let tabs = store.loadedTabs
+        Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+        VStack(spacing: 2) {
+            HStack {
+                Text(tabs.isEmpty ? "NO ACTIVE TABS" : "ACTIVE TABS  ·  \(tabs.count)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.4))
+                Spacer()
+                if tabs.count > 1 {
+                    Button("Sleep all") { store.unloadNow() }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.accent)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 4)
+            .padding(.bottom, 2)
+
+            if tabs.isEmpty {
+                Text("Open a tab and it shows here. Sleep one to free its memory without losing it.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(tabs) { tab in
+                            ActiveTabRow(tab: tab, store: store, isCurrent: tab === store.selectedTab)
+                        }
+                    }
+                }
+                .frame(maxHeight: 340)
+            }
+        }
+        .padding(8)
+    }
+}
+
+/// One loaded tab in the command bar, with switch, sleep and close.
+private struct ActiveTabRow: View {
+    @ObservedObject var tab: BrowserTab
+    let store: BrowserStore
+    let isCurrent: Bool
+    @Environment(\.theme) private var theme
+    @Local private var hover = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            FaviconView(tab: tab, size: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(tab.title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.92)).lineLimit(1)
+                Text(tab.host).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if isCurrent {
+                Text("on screen").font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.4))
+            } else {
+                Button { store.sleep(tab) } label: {
+                    Image(systemName: "moon.zzz")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Sleep this tab, keep it in the sidebar")
+            }
+            Button { store.close(tab) } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Close this tab")
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 42)
+        .background(hover ? theme.accent.opacity(0.4) : .white.opacity(0.03),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture { store.select(tab); store.closeCommandBar() }
+        .onHover { hover = $0 }
     }
 }
 

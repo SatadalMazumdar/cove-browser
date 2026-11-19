@@ -46,6 +46,8 @@ struct SidebarView: View {
                 Button("New Space...") { store.openSpaceEditor() }
                 Divider()
                 Button("Import from Arc...") { store.openArcImport() }
+                Divider()
+                Button("Settings...") { store.openSettings() }
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 13, weight: .medium))
@@ -71,11 +73,11 @@ private struct SpaceButton: View {
     var body: some View {
         // Brightness follows the swipe, so the icons cross-fade under the fingers.
         let nearness = max(0, 1 - abs(store.pagePosition - Double(index)))
-        SpaceIcon(icon: space.icon)
+        SpaceIcon(icon: space.icon, size: 11)
             .foregroundStyle(theme.text)
             .opacity(0.3 + 0.6 * nearness)
             .scaleEffect(1 + 0.12 * nearness)
-            .frame(width: 26, height: 26)
+            .frame(width: 22, height: 22)
             .background(marked ? theme.text.opacity(0.18) : .clear,
                         in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .contentShape(Rectangle())
@@ -175,6 +177,8 @@ private struct SpaceColumn: View {
     @Environment(\.theme) private var theme
     @Local private var dividerHover = false
     @Local private var titleHover = false
+    /// How far the list is scrolled. The top fade only shows once rows actually slide under the header.
+    @Local private var scrolledBy: CGFloat = 0
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -200,7 +204,21 @@ private struct SpaceColumn: View {
             }
             .padding(.top, 10)
             .padding(.horizontal, Metrics.gutter)
+            .background(GeometryReader { geo in
+                Color.clear.preference(key: ScrollOffsetKey.self,
+                                       value: geo.frame(in: .named("sidebarScroll")).minY)
+            })
         }
+        .coordinateSpace(name: "sidebarScroll")
+        .onPreferenceChange(ScrollOffsetKey.self) { scrolledBy = -$0 }
+        // The fade grows in over the first few points of scroll, so it is not there at rest.
+        .mask(
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: min(max(scrolledBy, 0), 22))
+                Color.black
+            }
+        )
     }
 
     private func toggleCollapsed() {
@@ -298,14 +316,14 @@ private struct FavoritesGrid: View {
 
     var body: some View {
         if !profile.favorites.isEmpty {
-            let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
-            LazyVGrid(columns: columns, spacing: 6) {
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 5), count: 4)
+            LazyVGrid(columns: columns, spacing: 5) {
                 ForEach(profile.favorites) { tab in
                     FavoriteTile(tab: tab, store: store, isSelected: selected === tab,
                                  marked: store.dropTarget == .before(tab.id))
                 }
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
         }
     }
 }
@@ -364,6 +382,8 @@ private struct URLPill: View {
     @ObservedObject var store: BrowserStore
     var tab: BrowserTab?
     @Environment(\.theme) private var theme
+    @Local private var hover = false
+    @Local private var copied = false
 
     var body: some View {
         Button { store.openCommandBar(.editURL) } label: {
@@ -374,6 +394,18 @@ private struct URLPill: View {
                     Text("Search or Enter URL...").foregroundStyle(theme.secondary)
                 }
                 Spacer(minLength: 0)
+                // A copy button appears on hover, ticks green for a moment after a copy.
+                if tab != nil, hover || copied {
+                    Button(action: copy) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(copied ? theme.accent : theme.secondary)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy URL")
+                }
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 11))
                     .foregroundStyle(theme.secondary)
@@ -385,6 +417,27 @@ private struct URLPill: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .contextMenu {
+            if tab != nil {
+                Button("Copy URL", action: copy)
+                Button("Paste and Go") {
+                    if let text = NSPasteboard.general.string(forType: .string) {
+                        store.query = text
+                        store.openCommandBar(.editURL)
+                        store.submit()
+                    }
+                }
+            }
+        }
+    }
+
+    private func copy() {
+        guard let url = tab?.url else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { copied = false }
     }
 }
 
@@ -586,11 +639,11 @@ private struct FavoriteTile: View {
     @Local private var hover = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 11, style: .continuous)
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
             .fill(isSelected ? theme.selected : (hover ? theme.text.opacity(0.13) : theme.pill))
             .shadow(color: isSelected ? theme.selectedShadow : .clear, radius: 2, y: 1)
-            .frame(height: 48)
-            .overlay { FaviconView(tab: tab, size: 18) }
+            .frame(height: 38)
+            .overlay { FaviconView(tab: tab, size: 16) }
             .overlay(alignment: .leading) {
                 if marked { Capsule().fill(Color.accentColor).frame(width: 2).padding(.vertical, 6).offset(x: -4) }
             }
@@ -661,4 +714,10 @@ private struct FolderView: View {
             }
         }
     }
+}
+
+/// Carries the sidebar list's scroll position up so the top fade can follow it.
+private struct ScrollOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }

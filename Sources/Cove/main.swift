@@ -64,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             switch args[flag + 1] {
             case "new": store.openSpaceEditor()
             case "edit": store.openSpaceEditor(editing: store.space)
+            case "settings": store.openSettings()
             default: store.openArcImport()
             }
         }
@@ -147,11 +148,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let up = String(UnicodeScalar(NSUpArrowFunctionKey)!)
         let down = String(UnicodeScalar(NSDownArrowFunctionKey)!)
 
-        menu("Cove", [
-            item("About Cove", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
+        menu("Clove", [
+            item("About Clove", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
             .separator(),
-            item("Hide Cove", #selector(NSApplication.hide(_:)), "h"),
-            item("Quit Cove", #selector(NSApplication.terminate(_:)), "q"),
+            item("Settings...", #selector(openSettings), ","),
+            .separator(),
+            item("Hide Clove", #selector(NSApplication.hide(_:)), "h"),
+            item("Quit Clove", #selector(NSApplication.terminate(_:)), "q"),
         ])
         menu("File", [
             item("New Tab", #selector(newTab), "t"),
@@ -227,6 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func editSpace() { store.openSpaceEditor(editing: store.space) }
     @objc private func deleteSpace() { store.confirmDelete(store.space) }
     @objc private func importFromArc() { store.openArcImport() }
+    @objc private func openSettings() { store.openSettings() }
     @objc private func nextSpace() { store.stepSpace(1) }
     @objc private func previousSpace() { store.stepSpace(-1) }
 

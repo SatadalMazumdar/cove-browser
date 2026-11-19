@@ -96,6 +96,16 @@ private struct SpaceScene: View {
                 .onHover { if $0 { store.peeking = true } }
 
             if store.peeking {
+                // Explicit shadow cast onto the page. A SwiftUI .shadow would be hidden under the
+                // web view's layer, so it is drawn as a real gradient that sits above the page.
+                LinearGradient(colors: [.black.opacity(0.32), .black.opacity(0.12), .clear],
+                               startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 26)
+                    .frame(maxHeight: .infinity)
+                    .padding(.leading, Metrics.sidebarWidth + 6)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+
                 SidebarView(store: store, floating: true)
                     .padding(.top, 8)
                     .frame(width: Metrics.sidebarWidth)
@@ -106,7 +116,11 @@ private struct SpaceScene: View {
                                                  startPoint: .topLeading, endPoint: .bottomTrailing))
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .shadow(color: .black.opacity(0.35), radius: 18, x: 4)
+                    .overlay {
+                        // A hairline edge so the panel reads against a bright page.
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(.white.opacity(0.08), lineWidth: 1)
+                    }
                     .padding(6)
                     .onHover { if !$0 { store.peeking = false } }
                     .transition(.move(edge: .leading))

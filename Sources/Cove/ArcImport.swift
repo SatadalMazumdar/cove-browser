@@ -199,23 +199,25 @@ struct ArcImport {
 
     // MARK: Icons and colours
 
-    /// Arc's built-in icon names, as the nearest emoji. Anything unknown becomes a plain dot.
+    /// Arc's built-in icon names mapped to clean SF Symbols. Cove uses no emoji.
     private static let iconNames: [String: String] = [
-        "planet": "🪐", "folder": "📁", "medical": "🩺", "bulb": "💡", "skull": "💀", "star": "⭐️",
-        "heart": "❤️", "home": "🏠", "book": "📖", "briefcase": "💼", "code": "💻", "game": "🎮",
-        "music": "🎵", "leaf": "🍃", "flame": "🔥", "moon": "🌙", "sunny": "☀️", "cloud": "☁️",
-        "airplane": "✈️", "cart": "🛒", "cafe": "☕️", "pizza": "🍕", "school": "🎓", "brush": "🖌️",
-        "camera": "📷", "bookmark": "🔖", "flask": "🧪", "football": "⚽️", "paw": "🐾", "rocket": "🚀",
-        "terminal": "⌨️", "wallet": "👛", "gift": "🎁", "flower": "🌸", "fitness": "🏋️", "film": "🎬",
-        "diamond": "💎", "earth": "🌍", "mail": "✉️", "people": "👥", "person": "👤", "flash": "⚡️",
+        "planet": "globe", "folder": "folder.fill", "medical": "cross.case.fill", "bulb": "lightbulb.fill",
+        "skull": "flame.fill", "star": "star.fill", "heart": "heart.fill", "home": "house.fill",
+        "book": "book.fill", "briefcase": "briefcase.fill", "code": "terminal.fill", "game": "gamecontroller.fill",
+        "music": "music.note", "leaf": "leaf.fill", "flame": "flame.fill", "moon": "moon.fill",
+        "sunny": "sun.max.fill", "cloud": "cloud.fill", "airplane": "airplane", "cart": "cart.fill",
+        "cafe": "cup.and.saucer.fill", "pizza": "fork.knife", "school": "graduationcap.fill", "brush": "paintbrush.fill",
+        "camera": "camera.fill", "bookmark": "bookmark.fill", "flask": "flask.fill", "football": "sportscourt.fill",
+        "paw": "pawprint.fill", "rocket": "sparkles", "terminal": "keyboard.fill", "wallet": "creditcard.fill",
+        "gift": "gift.fill", "flower": "camera.macro", "fitness": "figure.strengthtraining.traditional", "film": "film.fill",
+        "diamond": "diamond.fill", "earth": "globe", "mail": "envelope.fill", "people": "person.2.fill",
+        "person": "person.fill", "flash": "bolt.fill",
     ]
 
+    /// Arc also lets a space use an emoji. Those have no clean symbol, so they take the fallback.
     private static func icon(from value: Any?) -> String {
-        guard let kind = value as? JSON else { return "circle.fill" }
-        if let emoji = kind["emoji_v2"] as? String, !emoji.isEmpty { return emoji }
-        if let code = kind["emoji"] as? Int, let scalar = UnicodeScalar(code) { return String(Character(scalar)) }
-        if let name = kind["icon"] as? String { return iconNames[name] ?? "circle.fill" }
-        return "circle.fill"
+        guard let kind = value as? JSON, let name = kind["icon"] as? String else { return "globe" }
+        return iconNames[name] ?? "globe"
     }
 
     /// Arc stores a full palette per space. Cove needs a hue and how strong the tint is,
