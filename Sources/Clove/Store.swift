@@ -95,6 +95,8 @@ final class BrowserStore: ObservableObject {
     @Published var searchEngine: SearchEngine = .google
     /// Light or dark override for the whole window.
     @Published var appearance: Appearance = .system
+    /// Offer to save and fill passwords.
+    @Published var passwordsEnabled = true
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -168,6 +170,7 @@ final class BrowserStore: ObservableObject {
         ContentBlocker.shared.enabled = blockingEnabled
         ContentBlocker.shared.onReady = { [weak self] in self?.applyBlocking() }
         ContentBlocker.shared.prepare()
+        PasswordManager.shared.enabled = passwordsEnabled
         if let saved {
             spaceIndex = min(max(saved.spaceIndex, 0), spaces.count - 1)
             pagePosition = Double(spaceIndex)
@@ -178,6 +181,7 @@ final class BrowserStore: ObservableObject {
             if let hosts = saved.unblockedHosts { unblockedHosts = Set(hosts) }
             if let engine = saved.searchEngine { searchEngine = engine }
             if let look = saved.appearance { appearance = look }
+            if let pw = saved.passwordsEnabled { passwordsEnabled = pw }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -776,6 +780,12 @@ final class BrowserStore: ObservableObject {
 
     func setSearchEngine(_ engine: SearchEngine) {
         searchEngine = engine
+        scheduleSave()
+    }
+
+    func setPasswords(_ on: Bool) {
+        passwordsEnabled = on
+        PasswordManager.shared.enabled = on
         scheduleSave()
     }
 

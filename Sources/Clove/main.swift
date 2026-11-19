@@ -178,6 +178,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 exit(split?.webView != nil ? 0 : 1)
             }
         }
+        if args.contains("--password-check") {
+            let pm = PasswordManager.shared
+            let host = "clove-test.example"
+            var add: [String: Any] = [
+                kSecClass as String: kSecClassInternetPassword,
+                kSecAttrServer as String: host, kSecAttrService as String: "Clove",
+                kSecAttrAccount as String: "alice@example.com",
+                kSecValueData as String: Data("s3cr3t-pw".utf8),
+                kSecUseDataProtectionKeychain as String: false,
+            ]
+            SecItemDelete(add as CFDictionary)
+            let status = SecItemAdd(add as CFDictionary, nil)
+            print("SecItemAdd status:", status)
+            add.removeValue(forKey: kSecValueData as String)
+            pm.save(host: host, account: "alice@example.com", password: "s3cr3t-pw")
+            let creds = pm.credentials(for: host)
+            let ok = creds.first?.account == "alice@example.com" && creds.first?.password == "s3cr3t-pw"
+            print("password saved and read back:", ok, "account:", creds.first?.account ?? "-")
+            pm.save(host: host, account: "alice@example.com", password: "")  // overwrite
+            SecItemDelete([kSecClass as String: kSecClassInternetPassword,
+                           kSecAttrServer as String: host, kSecAttrService as String: "Clove"] as CFDictionary)
+            print("cleaned up:", pm.credentials(for: host).isEmpty)
+            exit(ok ? 0 : 1)
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true

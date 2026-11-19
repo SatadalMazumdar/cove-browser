@@ -54,6 +54,7 @@ private struct SavedSession: Codable {
     var unblockedHosts: [String]? = nil
     var searchEngine: SearchEngine? = nil
     var appearance: Appearance? = nil
+    var passwordsEnabled: Bool? = nil
 }
 
 // MARK: - Version 1, read only
@@ -118,6 +119,7 @@ enum SessionFile {
         var unblockedHosts: [String]?
         var searchEngine: SearchEngine?
         var appearance: Appearance?
+        var passwordsEnabled: Bool?
     }
 
     /// ~/Library/Application Support/Clove/session.json, unless CLOVE_SESSION_FILE points elsewhere.
@@ -178,7 +180,8 @@ enum SessionFile {
                       spaceIndex: session.spaceIndex, sidebarVisible: session.sidebarVisible,
                       idleSeconds: session.idleSeconds, blockingEnabled: session.blockingEnabled,
                       zoomLevels: session.zoomLevels, unblockedHosts: session.unblockedHosts,
-                      searchEngine: session.searchEngine, appearance: session.appearance)
+                      searchEngine: session.searchEngine, appearance: session.appearance,
+                      passwordsEnabled: session.passwordsEnabled)
     }
 
     static func save(_ store: BrowserStore) {
@@ -211,7 +214,8 @@ enum SessionFile {
             zoomLevels: store.zoomLevels.isEmpty ? nil : store.zoomLevels,
             unblockedHosts: store.unblockedHosts.isEmpty ? nil : Array(store.unblockedHosts),
             searchEngine: store.searchEngine,
-            appearance: store.appearance
+            appearance: store.appearance,
+            passwordsEnabled: store.passwordsEnabled
         )
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

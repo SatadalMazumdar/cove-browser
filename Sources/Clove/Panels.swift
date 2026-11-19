@@ -450,6 +450,22 @@ struct SettingsPanel: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.45))
                     .fixedSize(horizontal: false, vertical: true)
+
+                Toggle(isOn: Binding(get: { store.passwordsEnabled }, set: { store.setPasswords($0) })) {
+                    Text("Offer to save and fill passwords")
+                        .font(.system(size: 13)).foregroundStyle(.white.opacity(0.85))
+                }
+                .toggleStyle(.switch)
+                .padding(.top, 4)
+                HStack(spacing: 12) {
+                    Text("\(PasswordManager.shared.count) saved in Clove's own keychain store.")
+                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+                    if PasswordManager.shared.count > 0 {
+                        Button("Forget all") { PasswordManager.shared.forgetAll(); store.objectWillChange.send() }
+                            .buttonStyle(.plain).font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color(hue: 0.0, saturation: 0.6, brightness: 0.95))
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
