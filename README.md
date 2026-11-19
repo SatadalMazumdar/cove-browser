@@ -31,6 +31,31 @@ Needs macOS 14 or later and the Xcode Command Line Tools. Xcode itself is not re
 open build/Clove.app
 ```
 
+## Releasing
+
+`build.sh` signs with a Developer ID Application certificate when the keychain has one, and falls
+back to an ad hoc signature when it does not.
+
+To cut a release:
+
+1. Bump `VERSION`, commit, and push.
+2. Tag it: `git tag v$(cat VERSION) && git push --tags`.
+
+The Release workflow then builds, signs, notarizes, packs the DMG, signs it for Sparkle, and
+publishes a GitHub release with the DMG and `appcast.xml`. Installed copies find the update
+through that appcast.
+
+The workflow reads six repository secrets: `DEVELOPER_ID_P12` (the certificate, base64),
+`DEVELOPER_ID_P12_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` (an app-specific
+password), and `SPARKLE_PRIVATE_KEY`.
+
+To build a release on your own Mac, store the notary login once, then run the script:
+
+```sh
+xcrun notarytool store-credentials clove-notary --apple-id <id> --team-id <team> --password <app-specific>
+scripts/release.sh
+```
+
 ## Shortcuts
 
 | Keys | Action |

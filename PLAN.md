@@ -7,12 +7,12 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`█████████████████░░░` 31 / 36 done (86%)
+`███████████████████░` 34 / 36 done (94%)
 
 - Foundation: 15 / 15 ✅
 - Near-term features: 10 / 10 ✅
 - Bigger features: 5 / 5 ✅
-- Distribution and shipping: 1 / 6
+- Distribution and shipping: 4 / 6
 
 ## Foundation
 
@@ -55,11 +55,11 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Distribution and shipping
 
-- ⬜ Code signing and notarization with the Developer ID, hardened runtime and the web view's entitlements
-- ⬜ DMG packaging with a drag-to-Applications layout
-- ⬜ Sparkle auto-update: an appcast feed, an EdDSA key, and hosting
+- 🟢 Code signing and notarization. `build.sh` signs with the Developer ID certificate, the hardened runtime and camera and microphone entitlements. `scripts/release.sh` submits the DMG to Apple and staples the ticket. Signing works; the first notarized build waits on the Apple ID credentials.
+- ✅ DMG packaging with a drag-to-Applications layout, in `scripts/make-dmg.sh`
+- ✅ Sparkle auto-update. The app checks an appcast attached to the latest GitHub release, and each DMG carries an EdDSA signature. Check for Updates is in the Clove menu.
 - ✅ Full rename and bundle-id migration. Everything internal is Clove now, the bundle id is `dev.clove.browser`, and a first-launch migration copies the old Cove app data plus the WebKit and cookie stores so tabs, history and logins carry over. The GitHub repo is still named `cove-browser`; renaming it is a separate step whenever you want the URL changed.
-- ⬜ CI on a macOS runner that builds, signs, notarizes and attaches the DMG to a release
+- ✅ CI in `.github/workflows/release.yml`. A `v*` tag builds, signs, notarizes and publishes the DMG and appcast. It needs six repository secrets before the first tagged run.
 - ⬜ Landing page with the logo, a download button and the feature list
 
 ## Suggested order

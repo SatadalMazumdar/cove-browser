@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var probe: WKWebView?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Diagnostic runs never talk to the update feed.
+        if !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("--") }) { Updater.start() }
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1320, height: 860),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -287,6 +289,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         menu("Clove", [
             item("About Clove", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
+            item("Check for Updates...", #selector(checkForUpdates)),
             .separator(),
             item("Settings...", #selector(openSettings), ","),
             .separator(),
@@ -401,6 +404,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func deleteSpace() { store.confirmDelete(store.space) }
     @objc private func importFromArc() { store.openArcImport() }
     @objc private func openSettings() { store.openSettings() }
+    @objc private func checkForUpdates() { Updater.check() }
     @objc private func nextSpace() { store.stepSpace(1) }
     @objc private func previousSpace() { store.stepSpace(-1) }
 
