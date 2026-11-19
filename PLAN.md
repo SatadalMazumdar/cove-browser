@@ -7,10 +7,10 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`████████████░░░░░░░░` 21 / 36 done (58%)
+`████████████░░░░░░░░` 22 / 36 done (61%)
 
 - Foundation: 15 / 15 ✅
-- Near-term features: 6 / 10
+- Near-term features: 7 / 10
 - Bigger features: 0 / 5
 - Distribution and shipping: 0 / 6
 
@@ -40,9 +40,9 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ✅ Find on page (Cmd+F)
 - ✅ Per-site page zoom (Cmd+plus, minus, 0)
 - ✅ Arc history import, feeding the command bar (bookmarks come over as pinned tabs and favorites)
-- 🟢 Reader mode: strip a page to clean text
+- ✅ Reader mode: strip a page to clean text
+- 🟢 Per-site block on and off toggle in the URL pill
 - ⬜ Picture in picture and media keys
-- ⬜ Per-site block on and off toggle in the URL pill (blocking is global for now)
 - ⬜ More settings: default search engine, new-tab behaviour, default theme for new spaces, a global light or dark override
 
 ## Bigger features
