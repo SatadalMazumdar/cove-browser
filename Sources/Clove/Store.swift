@@ -90,6 +90,9 @@ final class BrowserStore: ObservableObject {
     @Published var blockingEnabled = true
     /// Page zoom per host, remembered. 1.0 is actual size and is not stored.
     @Published var zoomLevels: [String: Double] = [:]
+    /// The zoom percentage to show over the page, nil when the readout is hidden.
+    @Published var zoomHUD: Int?
+    private var zoomHUDTimer: DispatchWorkItem?
     /// Hosts where blocking is turned off, even when blocking is on overall.
     @Published var unblockedHosts: Set<String> = []
     /// Which search engine the command bar uses.
@@ -841,10 +844,20 @@ final class BrowserStore: ObservableObject {
         guard let tab = selectedTab, let webView = tab.webView else { return }
         let host = tab.host
         var zoom = zoomLevels[host] ?? 1.0
-        zoom = step == 0 ? 1.0 : max(0.5, min(3.0, (zoom + Double(step) * 0.1 * 10).rounded() / 10))
+        zoom = step == 0 ? 1.0 : max(0.5, min(3.0, ((zoom + Double(step) * 0.1) * 10).rounded() / 10))
         if abs(zoom - 1.0) < 0.001 { zoomLevels[host] = nil } else { zoomLevels[host] = zoom }
         webView.pageZoom = zoom
+        showZoomHUD(Int((zoom * 100).rounded()))
         scheduleSave()
+    }
+
+    /// Shows the zoom percentage over the page, and hides it again after a short pause.
+    private func showZoomHUD(_ percent: Int) {
+        zoomHUD = percent
+        zoomHUDTimer?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.zoomHUD = nil }
+        zoomHUDTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: work)
     }
 
     /// Applies the remembered zoom for a tab's host, called when a page commits.

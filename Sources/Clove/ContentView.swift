@@ -88,13 +88,20 @@ private struct SpaceScene: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            if store.finding {
-                FindBar(store: store)
-                    .padding(14)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(alignment: .trailing, spacing: 8) {
+                if store.finding {
+                    FindBar(store: store)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if let percent = store.zoomHUD {
+                    ZoomHUD(store: store, percent: percent)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
+            .padding(14)
         }
         .animation(.easeOut(duration: 0.15), value: store.finding)
+        .animation(.easeOut(duration: 0.15), value: store.zoomHUD != nil)
         .animation(.easeOut(duration: 0.18), value: space.splitTab != nil)
     }
 
