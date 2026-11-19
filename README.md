@@ -1,20 +1,24 @@
-# Cove
+# Clove
 
 A prototype Mac browser with a sidebar layout, built in Swift on Safari's engine.
 
-Cove is a working name. The app is about 3,400 lines of Swift and builds in under a minute.
+Clove is the name. The app is about 5,000 lines of Swift and builds in under a minute.
 
 ## What it does
 
 - Sidebar with favorites, pinned tabs, nested folders and today's tabs. The page sits in a rounded card.
-- Spaces with their own name, icon or emoji, colours and light or dark setting.
+- Spaces with their own name, icon, colours and light or dark setting.
 - Profiles. A space either gets its own cookies and logins or shares another space's. Favorites belong to the profile.
 - Create, edit, delete and reorder spaces. Create, rename and delete folders.
 - Drag tabs and folders to reorder them, into folders, onto favorites, or onto another space's icon.
-- Import from Arc: spaces, themes, icons, profiles, favorites, pinned tabs and folders. Logins and passwords do not come over.
+- Import from Arc: spaces, themes, icons, profiles, favorites, pinned tabs, folders and browsing history. Logins and passwords do not come over.
 - Two-finger swipe on the sidebar moves between spaces. The window tint blends as you swipe.
-- Command bar for search, addresses and switching to an open tab.
-- Background tabs unload after 10 minutes idle and reload when clicked.
+- Command bar for search, addresses, history and switching to an open tab, with a keyboard-driven active-tabs view.
+- Ad and tracker blocking, global and per site.
+- Downloads with progress and show-in-Finder.
+- Find on page, reader mode, per-site zoom and picture in picture.
+- Settings for tab sleeping, search engine and a light or dark override.
+- Background tabs unload after an idle timeout and reload when clicked.
 - Tabs, history and scroll position are saved between launches.
 - Safari's Web Inspector.
 
@@ -24,7 +28,7 @@ Needs macOS 14 or later and the Xcode Command Line Tools. Xcode itself is not re
 
 ```sh
 ./build.sh
-open build/Cove.app
+open build/Clove.app
 ```
 
 ## Shortcuts
@@ -46,24 +50,24 @@ open build/Cove.app
 
 ## Known gaps
 
-- No extensions, downloads, history view, password manager or split view.
-- Arc split views import as separate tabs. Arc history and bookmarks are not imported yet.
+- No extensions, password manager or split view yet.
+- Arc split views import as separate tabs.
 - Chrome DevTools and tools built on Chrome's debugging protocol cannot attach, because the engine is WebKit.
 - The Web Inspector and the audio check used by tab unloading call private WebKit properties.
 
 ## Where things are
 
-- `Sources/Cove/Models.swift` holds tabs, folders, profiles and spaces.
-- `Sources/Cove/Store.swift` is the app state: selection, drag and drop rules, spaces, idle unloading.
-- `Sources/Cove/Session.swift` reads and writes the session file, and upgrades the older format.
-- `Sources/Cove/ArcImport.swift` reads Arc's sidebar file.
-- `Sources/Cove/Sidebar.swift` is the sidebar.
-- `Sources/Cove/Panels.swift` is the space editor and the import screen.
-- `Sources/Cove/ContentView.swift` is the window layout and the page card.
-- `Sources/Cove/CommandBar.swift` is the command bar.
-- `Sources/Cove/main.swift` is the app start, the menu and the diagnostic flags.
+- `Sources/Clove/Models.swift` holds tabs, folders, profiles and spaces.
+- `Sources/Clove/Store.swift` is the app state: selection, drag and drop rules, spaces, idle unloading.
+- `Sources/Clove/Session.swift` reads and writes the session file, and upgrades the older format.
+- `Sources/Clove/ArcImport.swift` reads Arc's sidebar file.
+- `Sources/Clove/Sidebar.swift` is the sidebar.
+- `Sources/Clove/Panels.swift` is the space editor and the import screen.
+- `Sources/Clove/ContentView.swift` is the window layout and the page card.
+- `Sources/Clove/CommandBar.swift` is the command bar.
+- `Sources/Clove/main.swift` is the app start, the menu and the diagnostic flags.
 
-The session is stored at `~/Library/Application Support/Cove/session.json`.
+The session is stored at `~/Library/Application Support/Clove/session.json`.
 
 ## Licence
 
