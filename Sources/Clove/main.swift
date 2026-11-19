@@ -5,10 +5,10 @@ import WebKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    /// Any diagnostic flag runs on the sample tabs, apart from the session file. COVE_SESSION_FILE opts back in.
+    /// Any diagnostic flag runs on the sample tabs, apart from the session file. CLOVE_SESSION_FILE opts back in.
     private let store = BrowserStore(
         persist: !CommandLine.arguments.dropFirst().contains { $0.hasPrefix("--") }
-            || ProcessInfo.processInfo.environment["COVE_SESSION_FILE"] != nil
+            || ProcessInfo.processInfo.environment["CLOVE_SESSION_FILE"] != nil
     )
     private var window: NSWindow!
     private var bag = Set<AnyCancellable>()
@@ -27,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // which is how the floating sidebar knows to close.
         window.acceptsMouseMovedEvents = true
         window.contentView = NSHostingView(rootView: ContentView(store: store))
-        window.setFrameAutosaveName("CoveMainWindow")
+        window.setFrameAutosaveName("CloveMainWindow")
         if window.frame.origin == .zero { window.center() }
         window.delegate = self
         // Let the green button and Enter Full Screen use the system full screen, which gives the
@@ -491,6 +491,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 }
 
 MainActor.assumeIsolated {
+    // Carry data over from the old Cove name and bundle id before anything reads storage.
+    Support.migrateFromLegacy()
     let app = NSApplication.shared
     let delegate = AppDelegate()
     app.delegate = delegate

@@ -16,13 +16,12 @@ struct HistoryEntry {
 final class History {
     private var db: OpaquePointer?
 
-    /// ~/Library/Application Support/Cove/history.sqlite, or COVE_HISTORY_FILE for tests.
+    /// ~/Library/Application Support/Clove/history.sqlite, or CLOVE_HISTORY_FILE for tests.
     private static var fileURL: URL {
-        if let path = ProcessInfo.processInfo.environment["COVE_HISTORY_FILE"] {
+        if let path = ProcessInfo.processInfo.environment["CLOVE_HISTORY_FILE"] {
             return URL(fileURLWithPath: path)
         }
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("Cove/history.sqlite")
+        return Support.file("history.sqlite")
     }
 
     init(open: Bool = true) {

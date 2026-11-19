@@ -66,7 +66,7 @@ struct ArcImport {
     var spaces: [SpaceRecord] = []
 
     static var arcFolder: URL {
-        if let path = ProcessInfo.processInfo.environment["COVE_ARC_FOLDER"] {
+        if let path = ProcessInfo.processInfo.environment["CLOVE_ARC_FOLDER"] {
             return URL(fileURLWithPath: path)
         }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

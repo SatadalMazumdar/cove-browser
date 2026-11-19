@@ -272,8 +272,7 @@ extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
 enum FaviconCache {
     private static var memory: [String: NSImage] = [:]
     private static let folder: URL = {
-        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        let folder = caches.appendingPathComponent("Cove/favicons")
+        let folder = Support.cache("favicons")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder
     }()

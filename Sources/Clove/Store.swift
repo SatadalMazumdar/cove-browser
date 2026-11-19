@@ -126,11 +126,11 @@ final class BrowserStore: ObservableObject {
     let persist: Bool
 
     /// How long a background tab may sit before its page is unloaded, 0 to never unload.
-    /// Settings changes it. COVE_IDLE_SECONDS sets the starting value, which is how the path gets tested.
+    /// Settings changes it. CLOVE_IDLE_SECONDS sets the starting value, which is how the path gets tested.
     @Published var idleSeconds: TimeInterval = BrowserStore.defaultIdle
 
     static let defaultIdle: TimeInterval = {
-        if let text = ProcessInfo.processInfo.environment["COVE_IDLE_SECONDS"], let seconds = TimeInterval(text) {
+        if let text = ProcessInfo.processInfo.environment["CLOVE_IDLE_SECONDS"], let seconds = TimeInterval(text) {
             return seconds
         }
         return 10 * 60
@@ -153,7 +153,7 @@ final class BrowserStore: ObservableObject {
     init(persist: Bool = true) {
         self.persist = persist
         // Diagnostic runs do not touch the real history unless a test file is pointed at it.
-        history = History(open: persist || ProcessInfo.processInfo.environment["COVE_HISTORY_FILE"] != nil)
+        history = History(open: persist || ProcessInfo.processInfo.environment["CLOVE_HISTORY_FILE"] != nil)
         let saved = persist ? SessionFile.load() : nil
         startedFromSeed = saved == nil
         if let saved {
@@ -727,7 +727,7 @@ final class BrowserStore: ObservableObject {
             let id = profile.id
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 WKWebsiteDataStore.remove(forIdentifier: id) { error in
-                    if let error { NSLog("Cove could not erase the profile: \(error.localizedDescription)") }
+                    if let error { NSLog("Clove could not erase the profile: \(error.localizedDescription)") }
                 }
             }
         }

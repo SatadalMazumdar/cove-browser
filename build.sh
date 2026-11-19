@@ -1,15 +1,15 @@
 #!/bin/zsh
-# Builds Cove.app from the Swift package. Needs only the Command Line Tools.
+# Builds Clove.app from the Swift package. Needs only the Command Line Tools.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Cove"
-APP="build/Cove.app"
+BIN="$(swift build -c release --show-bin-path)/Clove"
+APP="build/Clove.app"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Cove"
+cp "$BIN" "$APP/Contents/MacOS/Clove"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
@@ -19,8 +19,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <dict>
     <key>CFBundleName</key><string>Clove</string>
     <key>CFBundleDisplayName</key><string>Clove</string>
-    <key>CFBundleIdentifier</key><string>dev.prototype.cove</string>
-    <key>CFBundleExecutable</key><string>Cove</string>
+    <key>CFBundleIdentifier</key><string>dev.clove.browser</string>
+    <key>CFBundleExecutable</key><string>Clove</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1</string>
@@ -32,8 +32,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
     <key>UTExportedTypeDeclarations</key>
     <array><dict>
-        <key>UTTypeIdentifier</key><string>dev.prototype.cove.item</string>
-        <key>UTTypeDescription</key><string>Cove sidebar item</string>
+        <key>UTTypeIdentifier</key><string>dev.clove.browser.item</string>
+        <key>UTTypeDescription</key><string>Clove sidebar item</string>
         <key>UTTypeConformsTo</key><array><string>public.data</string></array>
     </dict></array>
     <key>NSCameraUsageDescription</key><string>A website wants to use your camera.</string>

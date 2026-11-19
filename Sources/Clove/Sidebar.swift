@@ -330,7 +330,7 @@ private struct FavoritesGrid: View {
 // MARK: - Drag and drop
 
 /// Sidebar drags carry this type, so text dragged out of a web page never counts as a tab.
-let coveDragType = "dev.prototype.cove.item"
+let cloveDragType = "dev.clove.browser.item"
 
 private struct SidebarDrop: DropDelegate {
     let store: BrowserStore
@@ -352,7 +352,7 @@ extension View {
         onDrag {
             store.dragging = item
             let provider = NSItemProvider()
-            provider.registerDataRepresentation(forTypeIdentifier: coveDragType, visibility: .ownProcess) { done in
+            provider.registerDataRepresentation(forTypeIdentifier: cloveDragType, visibility: .ownProcess) { done in
                 done(Data(), nil)
                 return nil
             }
@@ -361,7 +361,7 @@ extension View {
     }
 
     func dropTarget(_ target: DropTarget, store: BrowserStore) -> some View {
-        onDrop(of: [coveDragType], delegate: SidebarDrop(store: store, target: target))
+        onDrop(of: [cloveDragType], delegate: SidebarDrop(store: store, target: target))
     }
 
     /// The line that shows where a dragged row will land.

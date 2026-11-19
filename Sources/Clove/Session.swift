@@ -120,13 +120,12 @@ enum SessionFile {
         var appearance: Appearance?
     }
 
-    /// ~/Library/Application Support/Cove/session.json, unless COVE_SESSION_FILE points elsewhere.
+    /// ~/Library/Application Support/Clove/session.json, unless CLOVE_SESSION_FILE points elsewhere.
     static var url: URL {
-        if let path = ProcessInfo.processInfo.environment["COVE_SESSION_FILE"] {
+        if let path = ProcessInfo.processInfo.environment["CLOVE_SESSION_FILE"] {
             return URL(fileURLWithPath: path)
         }
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("Cove/session.json")
+        return Support.file("session.json")
     }
 
     /// Returns nil on first launch, or when the file is unreadable. The caller then starts from the sample set.
@@ -218,7 +217,7 @@ enum SessionFile {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(session).write(to: url, options: .atomic)
         } catch {
-            NSLog("Cove could not save the session: \(error.localizedDescription)")
+            NSLog("Clove could not save the session: \(error.localizedDescription)")
         }
     }
 }
