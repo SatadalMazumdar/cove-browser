@@ -100,6 +100,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 exit(ready ? 0 : 1)
             }
         }
+        if args.contains("--download-check") {
+            window.ignoresMouseEvents = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                guard let wv = self.store.selectedTab?.webView else { print("no web view"); exit(1) }
+                wv.startDownload(using: URLRequest(url: URL(string: "https://example.com/")!)) { download in
+                    self.store.downloads.register(download)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                    let item = self.store.downloads.items.first
+                    let exists = item?.fileURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+                    print("download state:", String(describing: item?.state), "file saved:", exists, item?.filename ?? "")
+                    if let url = item?.fileURL { try? FileManager.default.removeItem(at: url) }  // clean up the test file
+                    exit(exists ? 0 : 1)
+                }
+            }
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true

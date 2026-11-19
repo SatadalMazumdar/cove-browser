@@ -170,7 +170,26 @@ extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
             decisionHandler(.cancel)
             return
         }
+        // A link marked for download (for example download attribute) becomes a file download.
+        if navigationAction.shouldPerformDownload {
+            decisionHandler(.download)
+            return
+        }
         decisionHandler(.allow)
+    }
+
+    /// A response the engine cannot display (a zip, a dmg, a pdf marked as attachment) is downloaded.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+                 decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        store?.downloads.register(download)
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        store?.downloads.register(download)
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,

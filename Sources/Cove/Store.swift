@@ -70,6 +70,8 @@ final class BrowserStore: ObservableObject {
     /// Goes up whenever spaces are added, removed, renamed or reordered. The menu bar rebuilds on it.
     @Published var revision = 0
 
+    /// Files downloaded from any page, shared across tabs and profiles.
+    let downloads = DownloadManager()
     var dragging: DragItem?
     weak var window: NSWindow?
     /// True when no session file existed, so this launch shows the sample tabs.

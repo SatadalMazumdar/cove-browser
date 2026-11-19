@@ -31,7 +31,7 @@ struct SidebarView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 0) {
-            IconButton(symbol: "archivebox") {}
+            DownloadsButton(store: store)
             Spacer()
             HStack(spacing: 4) {
                 ForEach(Array(store.spaces.enumerated()), id: \.element.id) { index, item in
@@ -737,6 +737,116 @@ private struct EdgeFadeTracker: ViewModifier {
             }
         } else {
             content
+        }
+    }
+}
+
+// MARK: - Downloads
+
+/// The archive icon in the bottom bar. Shows a dot while downloading, and a popover with the list.
+private struct DownloadsButton: View {
+    @ObservedObject var store: BrowserStore
+    @ObservedObject var downloads: DownloadManager
+    @Environment(\.theme) private var theme
+    @Local private var open = false
+
+    init(store: BrowserStore) {
+        self.store = store
+        self.downloads = store.downloads
+    }
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: "tray.and.arrow.down")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(theme.text.opacity(0.7))
+                .frame(width: 28, height: 26)
+                .overlay(alignment: .topTrailing) {
+                    if downloads.hasActive {
+                        Circle().fill(theme.accent).frame(width: 6, height: 6).offset(x: -2, y: 2)
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Downloads")
+        .popover(isPresented: $open, arrowEdge: .top) {
+            DownloadsList(downloads: downloads).frame(width: 300)
+        }
+    }
+}
+
+private struct DownloadsList: View {
+    @ObservedObject var downloads: DownloadManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Downloads").font(.system(size: 13, weight: .semibold))
+                Spacer()
+                if downloads.items.contains(where: { $0.state != .running }) {
+                    Button("Clear") { downloads.clearFinished() }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            Divider()
+            if downloads.items.isEmpty {
+                Text("Nothing downloaded yet.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(14)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(downloads.items) { item in
+                            DownloadRow(item: item, downloads: downloads)
+                        }
+                    }
+                }
+                .frame(maxHeight: 280)
+            }
+        }
+    }
+}
+
+private struct DownloadRow: View {
+    @ObservedObject var item: DownloadItem
+    let downloads: DownloadManager
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 20)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.filename).font(.system(size: 12)).lineLimit(1)
+                if item.state == .running {
+                    ProgressView(value: item.fraction).controlSize(.small)
+                } else {
+                    Text(item.state == .finished ? "Done" : "Failed")
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            if item.state == .finished {
+                Button { downloads.reveal(item) } label: {
+                    Image(systemName: "magnifyingglass").font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .help("Show in Finder")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+
+    private var icon: String {
+        switch item.state {
+        case .running: return "arrow.down.circle"
+        case .finished: return "doc"
+        case .failed: return "exclamationmark.triangle"
         }
     }
 }
