@@ -49,6 +49,7 @@ private struct SavedSession: Codable {
     var spaces: [SavedSpace]
     /// Optional so older files still read. Tab-sleeping delay in seconds, 0 means never.
     var idleSeconds: Double? = nil
+    var blockingEnabled: Bool? = nil
 }
 
 // MARK: - Version 1, read only
@@ -108,6 +109,7 @@ enum SessionFile {
         var spaceIndex: Int
         var sidebarVisible: Bool
         var idleSeconds: Double?
+        var blockingEnabled: Bool?
     }
 
     /// ~/Library/Application Support/Cove/session.json, unless COVE_SESSION_FILE points elsewhere.
@@ -167,7 +169,7 @@ enum SessionFile {
         }
         return Loaded(profiles: profiles, spaces: spaces,
                       spaceIndex: session.spaceIndex, sidebarVisible: session.sidebarVisible,
-                      idleSeconds: session.idleSeconds)
+                      idleSeconds: session.idleSeconds, blockingEnabled: session.blockingEnabled)
     }
 
     static func save(_ store: BrowserStore) {
@@ -195,7 +197,8 @@ enum SessionFile {
                            today: space.today.map(record), selected: space.selected?.id,
                            pinnedCollapsed: space.pinnedCollapsed)
             },
-            idleSeconds: store.idleSeconds
+            idleSeconds: store.idleSeconds,
+            blockingEnabled: store.blockingEnabled
         )
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

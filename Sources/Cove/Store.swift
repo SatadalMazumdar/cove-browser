@@ -57,6 +57,8 @@ final class BrowserStore: ObservableObject {
     @Published var sidebarVisible = true
     /// True while the window is in system full screen. The page drops its gutter then.
     @Published var fullScreen = false
+    /// Ad and tracker blocking, on by default.
+    @Published var blockingEnabled = true
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -116,11 +118,15 @@ final class BrowserStore: ObservableObject {
             (profiles, spaces) = Self.seed()
         }
         wire()
+        ContentBlocker.shared.enabled = blockingEnabled
+        ContentBlocker.shared.onReady = { [weak self] in self?.applyBlocking() }
+        ContentBlocker.shared.prepare()
         if let saved {
             spaceIndex = min(max(saved.spaceIndex, 0), spaces.count - 1)
             pagePosition = Double(spaceIndex)
             sidebarVisible = saved.sidebarVisible
             if let seconds = saved.idleSeconds { idleSeconds = seconds }
+            if let blocking = saved.blockingEnabled { blockingEnabled = blocking }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -697,6 +703,20 @@ final class BrowserStore: ObservableObject {
     func openSettings() {
         commandBar = nil
         panel = .settings
+    }
+
+    /// Re-attaches or detaches the blocklist on every loaded page to match the current setting.
+    func applyBlocking() {
+        for tab in everyTab {
+            if let webView = tab.webView { ContentBlocker.shared.apply(to: webView) }
+        }
+    }
+
+    func setBlocking(_ on: Bool) {
+        blockingEnabled = on
+        ContentBlocker.shared.enabled = on
+        applyBlocking()
+        scheduleSave()
     }
 
     /// Changes the tab-sleeping delay and runs a sweep so the new value takes effect at once.

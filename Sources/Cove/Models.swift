@@ -62,6 +62,7 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
         wv.allowsBackForwardNavigationGestures = true
         wv.allowsMagnification = true
         wv.isInspectable = true
+        ContentBlocker.shared.apply(to: wv)
         webView = wv
 
         wv.publisher(for: \.title).sink { [weak self] t in

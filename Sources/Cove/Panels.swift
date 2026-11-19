@@ -421,6 +421,20 @@ struct SettingsPanel: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                FieldLabel(text: "PRIVACY")
+                Toggle(isOn: Binding(get: { store.blockingEnabled }, set: { store.setBlocking($0) })) {
+                    Text("Block ads and trackers")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                .toggleStyle(.switch)
+                Text("Drops requests to known ad and analytics hosts. Rule-list based, so it stops most display ads and trackers but not script-injected video ads.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
                 FieldLabel(text: "NOW LOADED")
                 Text("\(store.loadedTabCount) of \(store.everyTab.count) tabs are using memory.")
                     .font(.system(size: 12))

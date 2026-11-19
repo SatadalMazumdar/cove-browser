@@ -91,6 +91,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
         }
+        if args.contains("--block-check") {
+            window.ignoresMouseEvents = true
+            // The store already kicked off prepare(); just check the shared list got populated.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let ready = ContentBlocker.shared.ruleList != nil
+                print("blocklist ready:", ready, "enabled:", ContentBlocker.shared.enabled)
+                exit(ready ? 0 : 1)
+            }
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true
