@@ -8,11 +8,14 @@ enum CommandBarMode { case newTab, editURL }
 enum Suggestion: Identifiable {
     case go(URL, String, isSearch: Bool)
     case tab(BrowserTab)
+    /// The "Active Tabs" command. Enter on it drills into the sub-view. Carries the loaded-tab count.
+    case activeTabs(Int)
 
     var id: String {
         switch self {
         case .go(let url, _, _): return "go:" + url.absoluteString
         case .tab(let tab): return "tab:" + tab.id.uuidString
+        case .activeTabs: return "cmd:activeTabs"
         }
     }
 }
@@ -57,6 +60,8 @@ final class BrowserStore: ObservableObject {
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
+    /// Inside the command bar's active-tabs sub-view.
+    @Published var showingActiveTabs = false
     @Published var panel: Panel?
     /// The spot a drag is hovering over, so the sidebar can draw the insertion mark.
     @Published var dropTarget: DropTarget?
@@ -132,6 +137,21 @@ final class BrowserStore: ObservableObject {
                 return event
             }
             guard self.commandBar != nil else { return event }
+            // The active-tabs sub-view is driven entirely from the keyboard: arrows move, Return
+            // switches, Cmd+Return sleeps, Cmd+Delete closes, Escape steps back to search.
+            if self.showingActiveTabs {
+                let count = self.activeMatches.count
+                switch event.keyCode {
+                case 53: self.showingActiveTabs = false; self.query = ""; self.highlight = 0; return nil
+                case 125: self.highlight = min(self.highlight + 1, max(count - 1, 0)); return nil
+                case 126: self.highlight = max(self.highlight - 1, 0); return nil
+                case 51 where event.modifierFlags.contains(.command):
+                    self.closeActiveTab(at: self.highlight); return nil
+                case 36 where event.modifierFlags.contains(.command):
+                    self.sleepActiveTab(at: self.highlight); return nil
+                default: return event
+                }
+            }
             switch event.keyCode {
             case 125: self.highlight = min(self.highlight + 1, max(self.suggestions.count - 1, 0)); return nil
             case 126: self.highlight = max(self.highlight - 1, 0); return nil
@@ -733,19 +753,25 @@ final class BrowserStore: ObservableObject {
         guard panel == nil else { return }
         query = mode == .editURL ? (selectedTab?.url.absoluteString ?? "") : ""
         highlight = 0
+        showingActiveTabs = false
         commandBar = mode
     }
 
     func closeCommandBar() {
         commandBar = nil
+        showingActiveTabs = false
         focusWeb()
     }
 
     var suggestions: [Suggestion] {
         let text = query.trimmingCharacters(in: .whitespaces)
         let tabs = space.allTabs
+        let loaded = loadedTabs.count
         if text.isEmpty {
-            return tabs.filter { $0 !== selectedTab }.prefix(6).map { .tab($0) }
+            // A short list of what is open, plus the Active Tabs command as a discoverable entry.
+            let open = (space.today + space.pinned.flatMap(\.tabs) + space.profile.favorites)
+                .filter { $0 !== selectedTab }.prefix(4).map { Suggestion.tab($0) }
+            return Array(open) + (loaded > 0 ? [.activeTabs(loaded)] : [])
         }
         let needle = text.lowercased()
         let matches = tabs.filter {
@@ -753,16 +779,54 @@ final class BrowserStore: ObservableObject {
         }
         let (url, isSearch) = Self.resolve(text)
         let label = isSearch ? text : (url.host ?? text)
-        return [.go(url, label, isSearch: isSearch)] + matches.prefix(5).map { .tab($0) }
+        // Searching "active tabs" (or a piece of it) surfaces the command to drill in.
+        let command: [Suggestion] = (loaded > 0 && "active tabs".contains(needle)) ? [.activeTabs(loaded)] : []
+        return command + [.go(url, label, isSearch: isSearch)] + matches.prefix(5).map { .tab($0) }
+    }
+
+    /// Loaded tabs matching the filter typed inside the active-tabs sub-view.
+    var activeMatches: [BrowserTab] {
+        let text = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !text.isEmpty else { return loadedTabs }
+        return loadedTabs.filter { $0.title.lowercased().contains(text) || $0.host.lowercased().contains(text) }
+    }
+
+    /// Closes the highlighted tab in the sub-view, then keeps the highlight in range.
+    func closeActiveTab(at index: Int) {
+        let list = activeMatches
+        guard list.indices.contains(index) else { return }
+        close(list[index])
+        highlight = min(highlight, max(activeMatches.count - 1, 0))
+    }
+
+    /// Sleeps the highlighted tab in the sub-view, unless it is the one on screen.
+    func sleepActiveTab(at index: Int) {
+        let list = activeMatches
+        guard list.indices.contains(index), list[index] !== selectedTab else { return }
+        sleep(list[index])
+        highlight = min(highlight, max(activeMatches.count - 1, 0))
     }
 
     func submit() {
+        if showingActiveTabs {
+            let list = activeMatches
+            let tab = list.indices.contains(highlight) ? list[highlight] : list.first
+            if let tab { select(tab); closeCommandBar() }
+            return
+        }
         let list = suggestions
         guard list.indices.contains(highlight) else { closeCommandBar(); return }
         run(list[highlight])
     }
 
     func run(_ suggestion: Suggestion) {
+        if case .activeTabs = suggestion {
+            // Enter the sub-view instead of closing. The filter field starts empty.
+            query = ""
+            highlight = 0
+            showingActiveTabs = true
+            return
+        }
         let mode = commandBar
         commandBar = nil
         switch suggestion {
@@ -775,6 +839,8 @@ final class BrowserStore: ObservableObject {
             } else {
                 newTab(url: url)
             }
+        case .activeTabs:
+            break
         }
     }
 

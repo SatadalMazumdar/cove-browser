@@ -5,7 +5,6 @@ struct CommandBar: View {
     @ObservedObject var store: BrowserStore
     @Environment(\.theme) private var theme
     @FocusState private var focused: Bool
-
     var body: some View {
         ZStack(alignment: .top) {
             Color.black.opacity(0.12)
@@ -14,10 +13,21 @@ struct CommandBar: View {
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.5))
-                    TextField("Search or Enter URL...", text: $store.query)
+                    if store.showingActiveTabs {
+                        Button { store.showingActiveTabs = false; store.query = "" } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    TextField(store.showingActiveTabs ? "Filter active tabs..." : "Search or Enter URL...",
+                              text: $store.query)
                         .textFieldStyle(.plain)
                         .font(.system(size: 19))
                         .foregroundStyle(.white)
@@ -27,10 +37,8 @@ struct CommandBar: View {
                 .padding(.horizontal, 18)
                 .frame(height: 58)
 
-                // Empty bar shows the tabs holding memory, each with sleep and close. Typing
-                // switches back to search and open-tab suggestions.
-                if store.query.trimmingCharacters(in: .whitespaces).isEmpty {
-                    activeTabs
+                if store.showingActiveTabs {
+                    activeTabsView
                 } else {
                     let items = store.suggestions
                     if !items.isEmpty {
@@ -63,45 +71,55 @@ struct CommandBar: View {
         .onChange(of: store.query) { _, _ in store.highlight = 0 }
     }
 
-    @ViewBuilder private var activeTabs: some View {
-        let tabs = store.loadedTabs
-        Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-        VStack(spacing: 2) {
-            HStack {
-                Text(tabs.isEmpty ? "NO ACTIVE TABS" : "ACTIVE TABS  ·  \(tabs.count)")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.4))
-                Spacer()
-                if tabs.count > 1 {
-                    Button("Sleep all") { store.unloadNow() }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(theme.accent)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 4)
-            .padding(.bottom, 2)
-
-            if tabs.isEmpty {
-                Text("Open a tab and it shows here. Sleep one to free its memory without losing it.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-            } else {
+    private var activeTabsView: some View {
+        let tabs = store.activeMatches
+        return VStack(spacing: 0) {
+            Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+            ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 2) {
-                        ForEach(tabs) { tab in
-                            ActiveTabRow(tab: tab, store: store, isCurrent: tab === store.selectedTab)
+                        ForEach(Array(tabs.enumerated()), id: \.element.id) { index, tab in
+                            ActiveTabRow(tab: tab, store: store,
+                                         isCurrent: tab === store.selectedTab,
+                                         isHighlighted: index == store.highlight)
+                                .id(index)
                         }
                     }
+                    .padding(8)
                 }
-                .frame(maxHeight: 340)
+                .frame(maxHeight: 360)
+                .onChange(of: store.highlight) { _, h in
+                    withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(h, anchor: .center) }
+                }
             }
+            // Keyboard hints, so the actions are discoverable without a mouse.
+            HStack(spacing: 16) {
+                shortcutHint("return", "Switch")
+                shortcutHint("command return", "Sleep")
+                shortcutHint("command delete.left", "Close")
+                Spacer()
+                Button("Sleep all") { store.unloadNow() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(theme.accent)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 34)
+            .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.06)).frame(height: 1) }
         }
-        .padding(8)
+    }
+
+    private func shortcutHint(_ symbols: String, _ label: String) -> some View {
+        HStack(spacing: 5) {
+            ForEach(symbols.split(separator: " ").map(String.init), id: \.self) { s in
+                Image(systemName: s)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: 18, height: 16)
+                    .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            }
+            Text(label).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+        }
     }
 }
 
@@ -110,6 +128,7 @@ private struct ActiveTabRow: View {
     @ObservedObject var tab: BrowserTab
     let store: BrowserStore
     let isCurrent: Bool
+    var isHighlighted = false
     @Environment(\.theme) private var theme
     @Local private var hover = false
 
@@ -146,7 +165,7 @@ private struct ActiveTabRow: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 42)
-        .background(hover ? theme.accent.opacity(0.4) : .white.opacity(0.03),
+        .background(isHighlighted ? theme.accent.opacity(0.55) : (hover ? theme.accent.opacity(0.3) : .white.opacity(0.03)),
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { store.select(tab); store.closeCommandBar() }
@@ -188,6 +207,10 @@ private struct SuggestionRow: View {
             Image(systemName: isSearch ? "magnifyingglass" : "globe")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
+        case .activeTabs:
+            Image(systemName: "square.stack.3d.up")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
         }
     }
 
@@ -195,6 +218,7 @@ private struct SuggestionRow: View {
         switch item {
         case .tab(let tab): return tab.title
         case .go(_, let label, _): return label
+        case .activeTabs: return "Active Tabs"
         }
     }
 
@@ -202,6 +226,7 @@ private struct SuggestionRow: View {
         switch item {
         case .tab: return "Switch to Tab"
         case .go(_, _, let isSearch): return isSearch ? "Search Google" : "Open"
+        case .activeTabs(let count): return count == 1 ? "1 tab  ›" : "\(count) tabs  ›"
         }
     }
 }

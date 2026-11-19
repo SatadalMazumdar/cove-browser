@@ -177,8 +177,11 @@ private struct SpaceColumn: View {
     @Environment(\.theme) private var theme
     @Local private var dividerHover = false
     @Local private var titleHover = false
-    /// How far the list is scrolled. The top fade only shows once rows actually slide under the header.
-    @Local private var scrolledBy: CGFloat = 0
+    /// How far from each edge the list is scrolled. The fade at an edge grows in only once there
+    /// is content past it, so a short list at rest has no fade and no hard clip.
+    @Local private var topFade: CGFloat = 0
+    @Local private var bottomFade: CGFloat = 0
+    private let fadeHeight: CGFloat = 24
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -204,19 +207,15 @@ private struct SpaceColumn: View {
             }
             .padding(.top, 10)
             .padding(.horizontal, Metrics.gutter)
-            .background(GeometryReader { geo in
-                Color.clear.preference(key: ScrollOffsetKey.self,
-                                       value: geo.frame(in: .named("sidebarScroll")).minY)
-            })
         }
-        .coordinateSpace(name: "sidebarScroll")
-        .onPreferenceChange(ScrollOffsetKey.self) { scrolledBy = -$0 }
-        // The fade grows in over the first few points of scroll, so it is not there at rest.
+        .modifier(EdgeFadeTracker(top: $topFade, bottom: $bottomFade, limit: fadeHeight))
         .mask(
             VStack(spacing: 0) {
                 LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                    .frame(height: min(max(scrolledBy, 0), 22))
+                    .frame(height: topFade)
                 Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: bottomFade)
             }
         )
     }
@@ -716,8 +715,28 @@ private struct FolderView: View {
     }
 }
 
-/// Carries the sidebar list's scroll position up so the top fade can follow it.
-private struct ScrollOffsetKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+/// Reports how far the list can still scroll past each edge, so the fades track it reliably.
+/// Uses the scroll geometry API on macOS 15 and later; below that the fades stay off.
+private struct EdgeFadeTracker: ViewModifier {
+    @Binding var top: CGFloat
+    @Binding var bottom: CGFloat
+    let limit: CGFloat
+
+    private struct Edges: Equatable { var top: CGFloat; var bottom: CGFloat }
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.onScrollGeometryChange(for: Edges.self) { geo in
+                Edges(top: geo.contentOffset.y,
+                      bottom: geo.contentSize.height - geo.contentOffset.y - geo.containerSize.height)
+            } action: { _, edges in
+                withAnimation(.easeOut(duration: 0.12)) {
+                    top = min(max(edges.top, 0), limit)
+                    bottom = min(max(edges.bottom, 0), limit)
+                }
+            }
+        } else {
+            content
+        }
+    }
 }
