@@ -54,3 +54,7 @@ open build/Cove.app
 - `Sources/Cove/main.swift` is the app start, the menu and the diagnostic flags.
 
 The session is stored at `~/Library/Application Support/Cove/session.json`.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
