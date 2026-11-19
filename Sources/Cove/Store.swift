@@ -51,6 +51,8 @@ final class BrowserStore: ObservableObject {
     @Published var pagePosition: Double = 0
     @Published var peeking = false
     @Published var sidebarVisible = true
+    /// True while the window is in system full screen. The page drops its gutter then.
+    @Published var fullScreen = false
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -66,6 +68,7 @@ final class BrowserStore: ObservableObject {
     let startedFromSeed: Bool
     private var keyMonitor: Any?
     private var scrollMonitor: Any?
+    private var mouseMonitor: Any?
     private var idleTimer: Timer?
     private var saveTask: Task<Void, Never>?
     /// False for diagnostic runs, so a test launch never reads or overwrites the real session.
@@ -144,6 +147,21 @@ final class BrowserStore: ObservableObject {
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             guard let self else { return event }
             return self.handleScroll(event) ? nil : event
+        }
+
+        // The floating sidebar closes when the pointer leaves it. Its SwiftUI hover-exit is
+        // unreliable over a web view, so the pointer position is tracked directly as a backstop.
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { [weak self] event in
+            self?.trackPeek(event)
+            return event
+        }
+    }
+
+    /// Closes the floating sidebar once the pointer moves past its right edge, or on a click outside it.
+    private func trackPeek(_ event: NSEvent) {
+        guard peeking, event.window === window else { return }
+        if event.locationInWindow.x > Metrics.sidebarWidth + 14 {
+            peeking = false
         }
     }
 

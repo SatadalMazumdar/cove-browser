@@ -111,7 +111,7 @@ private struct WindowControls: View {
             dot(Color(red: 1, green: 0.37, blue: 0.34), "xmark") { store.window?.performClose(nil) }
             dot(Color(red: 0.99, green: 0.74, blue: 0.18), "minus") { store.window?.miniaturize(nil) }
             dot(Color(red: 0.16, green: 0.78, blue: 0.25), "arrow.up.left.and.arrow.down.right") {
-                store.window?.zoom(nil)
+                store.window?.toggleFullScreen(nil)
             }
         }
         .padding(.leading, 4)

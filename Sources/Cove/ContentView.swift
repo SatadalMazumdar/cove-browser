@@ -41,10 +41,12 @@ private struct SpaceScene: View {
                         .frame(width: Metrics.sidebarWidth)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
+                // Full screen runs the page edge to edge, no gutter and no rounded corners.
+                // A window keeps the gutter, with the leading side flush against the sidebar.
                 webCard
-                    .padding(.vertical, Metrics.gutter)
-                    .padding(.trailing, Metrics.gutter)
-                    .padding(.leading, store.sidebarVisible ? 0 : Metrics.gutter)
+                    .padding(.vertical, store.fullScreen ? 0 : Metrics.gutter)
+                    .padding(.trailing, store.fullScreen ? 0 : Metrics.gutter)
+                    .padding(.leading, store.fullScreen || store.sidebarVisible ? 0 : Metrics.gutter)
             }
 
             if !store.sidebarVisible { floatingSidebar }
@@ -60,20 +62,24 @@ private struct SpaceScene: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.sidebarVisible)
+        .animation(.easeOut(duration: 0.2), value: store.fullScreen)
         .animation(.easeOut(duration: 0.12), value: store.commandBar != nil)
         .animation(.easeOut(duration: 0.12), value: store.panel != nil)
         .animation(.easeOut(duration: 0.18), value: store.peeking)
         .onChange(of: store.sidebarVisible) { _, _ in store.peeking = false }
     }
 
+    /// No rounded corners when the page runs edge to edge in full screen.
+    private var cardRadius: CGFloat { store.fullScreen ? 0 : Metrics.cardRadius }
+
     private var webCard: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .fill(theme.card)
-                .shadow(color: .black.opacity(0.22), radius: 6, y: 1)
+                .shadow(color: store.fullScreen ? .clear : .black.opacity(0.22), radius: 6, y: 1)
             if let webView = space.selected?.webView {
-                WebContainer(webView: webView)
-                    .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
+                WebContainer(webView: webView, radius: cardRadius)
+                    .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
                     .id(space.id)
                     .transition(.opacity)
             }
@@ -113,17 +119,19 @@ private struct SpaceScene: View {
 /// so switching swaps the subview and never reloads the page.
 private struct WebContainer: NSViewRepresentable {
     let webView: WKWebView
+    var radius: CGFloat = Metrics.cardRadius
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         container.wantsLayer = true
-        container.layer?.cornerRadius = Metrics.cardRadius
+        container.layer?.cornerRadius = radius
         container.layer?.cornerCurve = .continuous
         container.layer?.masksToBounds = true
         return container
     }
 
     func updateNSView(_ container: NSView, context: Context) {
+        container.layer?.cornerRadius = radius
         guard container.subviews.first !== webView else { return }
         container.subviews.forEach { $0.removeFromSuperview() }
         webView.frame = container.bounds

@@ -4,7 +4,7 @@ import SwiftUI
 import WebKit
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Any diagnostic flag runs on the sample tabs, apart from the session file. COVE_SESSION_FILE opts back in.
     private let store = BrowserStore(
         persist: !CommandLine.arguments.dropFirst().contains { $0.hasPrefix("--") }
@@ -23,9 +23,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.minSize = NSSize(width: 720, height: 480)
+        // So the store's mouse monitor keeps getting moves while the pointer is over a web view,
+        // which is how the floating sidebar knows to close.
+        window.acceptsMouseMovedEvents = true
         window.contentView = NSHostingView(rootView: ContentView(store: store))
         window.setFrameAutosaveName("CoveMainWindow")
         if window.frame.origin == .zero { window.center() }
+        window.delegate = self
+        // Let the green button and Enter Full Screen use the system full screen, which gives the
+        // window its own Space. fullScreenPrimary is what makes that work for a custom titlebar.
+        window.collectionBehavior = [.fullScreenPrimary]
         store.window = window
 
         // The traffic lights live in the sidebar, so they go away with it.
@@ -110,6 +117,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         store.saveNow()
     }
+
+    // The page runs edge to edge in full screen and keeps its gutter in a window.
+    func windowDidEnterFullScreen(_ notification: Notification) { store.fullScreen = true }
+    func windowDidExitFullScreen(_ notification: Notification) { store.fullScreen = false }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
