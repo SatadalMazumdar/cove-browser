@@ -7,12 +7,12 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`███████████████████░` 34 / 36 done (94%)
+`███████████████████░` 35 / 36 done (97%)
 
 - Foundation: 15 / 15 ✅
 - Near-term features: 10 / 10 ✅
 - Bigger features: 5 / 5 ✅
-- Distribution and shipping: 4 / 6
+- Distribution and shipping: 5 / 6
 
 ## Foundation
 
@@ -55,7 +55,7 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Distribution and shipping
 
-- 🟢 Code signing and notarization. `build.sh` signs with the Developer ID certificate, the hardened runtime and camera and microphone entitlements. `scripts/release.sh` submits the DMG to Apple and staples the ticket. Signing works; the first notarized build waits on the Apple ID credentials.
+- ✅ Code signing and notarization. `build.sh` signs with the Developer ID certificate, the hardened runtime and camera and microphone entitlements. `scripts/release.sh` submits the DMG to Apple and staples the ticket. Apple accepted the 0.1.0 DMG and Gatekeeper reports it as Notarized Developer ID.
 - ✅ DMG packaging with a drag-to-Applications layout, in `scripts/make-dmg.sh`
 - ✅ Sparkle auto-update. The app checks an appcast attached to the latest GitHub release, and each DMG carries an EdDSA signature. Check for Updates is in the Clove menu.
 - ✅ Full rename and bundle-id migration. Everything internal is Clove now, the bundle id is `dev.clove.browser`, and a first-launch migration copies the old Cove app data plus the WebKit and cookie stores so tabs, history and logins carry over. The GitHub repo is still named `cove-browser`; renaming it is a separate step whenever you want the URL changed.
