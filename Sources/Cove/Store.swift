@@ -5,6 +5,34 @@ import WebKit
 
 enum CommandBarMode { case newTab, editURL }
 
+enum SearchEngine: String, CaseIterable, Codable {
+    case google, duckDuckGo, bing
+
+    var name: String {
+        switch self {
+        case .google: return "Google"
+        case .duckDuckGo: return "DuckDuckGo"
+        case .bing: return "Bing"
+        }
+    }
+
+    func searchURL(for query: String) -> URL {
+        var components: URLComponents
+        switch self {
+        case .google: components = URLComponents(string: "https://www.google.com/search")!
+        case .duckDuckGo: components = URLComponents(string: "https://duckduckgo.com/")!
+        case .bing: components = URLComponents(string: "https://www.bing.com/search")!
+        }
+        components.queryItems = [URLQueryItem(name: "q", value: query)]
+        return components.url!
+    }
+}
+
+enum Appearance: String, CaseIterable, Codable {
+    case system, light, dark
+    var name: String { rawValue.capitalized }
+}
+
 enum Suggestion: Identifiable {
     case go(URL, String, isSearch: Bool)
     case tab(BrowserTab)
@@ -63,6 +91,10 @@ final class BrowserStore: ObservableObject {
     @Published var zoomLevels: [String: Double] = [:]
     /// Hosts where blocking is turned off, even when blocking is on overall.
     @Published var unblockedHosts: Set<String> = []
+    /// Which search engine the command bar uses.
+    @Published var searchEngine: SearchEngine = .google
+    /// Light or dark override for the whole window.
+    @Published var appearance: Appearance = .system
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -142,6 +174,8 @@ final class BrowserStore: ObservableObject {
             if let blocking = saved.blockingEnabled { blockingEnabled = blocking }
             if let zoom = saved.zoomLevels { zoomLevels = zoom }
             if let hosts = saved.unblockedHosts { unblockedHosts = Set(hosts) }
+            if let engine = saved.searchEngine { searchEngine = engine }
+            if let look = saved.appearance { appearance = look }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -737,6 +771,26 @@ final class BrowserStore: ObservableObject {
         for tab in everyTab { applyBlocking(to: tab) }
     }
 
+    func setSearchEngine(_ engine: SearchEngine) {
+        searchEngine = engine
+        scheduleSave()
+    }
+
+    func setAppearance(_ value: Appearance) {
+        appearance = value
+        applyAppearance()
+        scheduleSave()
+    }
+
+    /// Forces the window light or dark, or follows the system.
+    func applyAppearance() {
+        switch appearance {
+        case .system: window?.appearance = nil
+        case .light: window?.appearance = NSAppearance(named: .aqua)
+        case .dark: window?.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
     func setBlocking(_ on: Bool) {
         blockingEnabled = on
         ContentBlocker.shared.enabled = on
@@ -875,7 +929,7 @@ final class BrowserStore: ObservableObject {
         let matches = tabs.filter {
             $0.title.lowercased().contains(needle) || $0.host.lowercased().contains(needle)
         }
-        let (url, isSearch) = Self.resolve(text)
+        let (url, isSearch) = resolve(text)
         let label = isSearch ? text : (url.host ?? text)
         // Searching "active tabs" (or a piece of it) surfaces the command to drill in.
         let command: [Suggestion] = (loaded > 0 && "active tabs".contains(needle)) ? [.activeTabs(loaded)] : []
@@ -948,16 +1002,14 @@ final class BrowserStore: ObservableObject {
         }
     }
 
-    /// Turns typed text into a URL, or a search when it does not look like an address.
-    static func resolve(_ text: String) -> (URL, isSearch: Bool) {
+    /// Turns typed text into a URL, or a search with the chosen engine when it is not an address.
+    func resolve(_ text: String) -> (URL, isSearch: Bool) {
         if text.contains("://"), let url = URL(string: text) { return (url, false) }
         let looksLikeHost = !text.contains(" ") && (text.contains(".") || text.hasPrefix("localhost"))
         if looksLikeHost, let url = URL(string: (text.hasPrefix("localhost") ? "http://" : "https://") + text) {
             return (url, false)
         }
-        var components = URLComponents(string: "https://www.google.com/search")!
-        components.queryItems = [URLQueryItem(name: "q", value: text)]
-        return (components.url!, true)
+        return (searchEngine.searchURL(for: text), true)
     }
 
     private func focusWeb() {

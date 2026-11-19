@@ -420,6 +420,24 @@ struct SettingsPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    FieldLabel(text: "SEARCH ENGINE")
+                    Picker("", selection: Binding(get: { store.searchEngine }, set: { store.setSearchEngine($0) })) {
+                        ForEach(SearchEngine.allCases, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .labelsHidden()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    FieldLabel(text: "APPEARANCE")
+                    Picker("", selection: Binding(get: { store.appearance }, set: { store.setAppearance($0) })) {
+                        ForEach(Appearance.allCases, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 FieldLabel(text: "PRIVACY")
                 Toggle(isOn: Binding(get: { store.blockingEnabled }, set: { store.setBlocking($0) })) {

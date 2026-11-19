@@ -52,6 +52,8 @@ private struct SavedSession: Codable {
     var blockingEnabled: Bool? = nil
     var zoomLevels: [String: Double]? = nil
     var unblockedHosts: [String]? = nil
+    var searchEngine: SearchEngine? = nil
+    var appearance: Appearance? = nil
 }
 
 // MARK: - Version 1, read only
@@ -114,6 +116,8 @@ enum SessionFile {
         var blockingEnabled: Bool?
         var zoomLevels: [String: Double]?
         var unblockedHosts: [String]?
+        var searchEngine: SearchEngine?
+        var appearance: Appearance?
     }
 
     /// ~/Library/Application Support/Cove/session.json, unless COVE_SESSION_FILE points elsewhere.
@@ -174,7 +178,8 @@ enum SessionFile {
         return Loaded(profiles: profiles, spaces: spaces,
                       spaceIndex: session.spaceIndex, sidebarVisible: session.sidebarVisible,
                       idleSeconds: session.idleSeconds, blockingEnabled: session.blockingEnabled,
-                      zoomLevels: session.zoomLevels, unblockedHosts: session.unblockedHosts)
+                      zoomLevels: session.zoomLevels, unblockedHosts: session.unblockedHosts,
+                      searchEngine: session.searchEngine, appearance: session.appearance)
     }
 
     static func save(_ store: BrowserStore) {
@@ -205,7 +210,9 @@ enum SessionFile {
             idleSeconds: store.idleSeconds,
             blockingEnabled: store.blockingEnabled,
             zoomLevels: store.zoomLevels.isEmpty ? nil : store.zoomLevels,
-            unblockedHosts: store.unblockedHosts.isEmpty ? nil : Array(store.unblockedHosts)
+            unblockedHosts: store.unblockedHosts.isEmpty ? nil : Array(store.unblockedHosts),
+            searchEngine: store.searchEngine,
+            appearance: store.appearance
         )
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)

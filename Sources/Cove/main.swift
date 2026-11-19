@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // window its own Space. fullScreenPrimary is what makes that work for a custom titlebar.
         window.collectionBehavior = [.fullScreenPrimary]
         store.window = window
+        store.applyAppearance()
 
         // The traffic lights live in the sidebar, so they go away with it.
         store.$sidebarVisible.sink { [weak self] visible in
