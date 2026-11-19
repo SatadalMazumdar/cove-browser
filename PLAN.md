@@ -7,10 +7,10 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`█████████████░░░░░░░` 23 / 36 done (64%)
+`██████████████░░░░░░` 25 / 36 done (69%)
 
 - Foundation: 15 / 15 ✅
-- Near-term features: 8 / 10
+- Near-term features: 10 / 10 ✅
 - Bigger features: 0 / 5
 - Distribution and shipping: 0 / 6
 
@@ -42,8 +42,8 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ✅ Arc history import, feeding the command bar (bookmarks come over as pinned tabs and favorites)
 - ✅ Reader mode: strip a page to clean text
 - ✅ Per-site block on and off toggle in the URL pill
-- 🟢 More settings: default search engine and a global light or dark override
-- ⬜ Picture in picture and media keys
+- ✅ More settings: default search engine and a global light or dark override
+- ✅ Picture in picture, and media keys through WebKit's Now Playing
 
 ## Bigger features
 
