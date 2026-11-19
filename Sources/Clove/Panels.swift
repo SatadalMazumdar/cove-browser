@@ -480,6 +480,21 @@ struct SettingsPanel: View {
                     .foregroundStyle(Color(hue: 0.62, saturation: 0.5, brightness: 0.95))
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                FieldLabel(text: "SYNC")
+                Toggle(isOn: Binding(get: { store.syncEnabled }, set: { store.setSync($0) })) {
+                    Text("Sync tabs and spaces through iCloud Drive")
+                        .font(.system(size: 13)).foregroundStyle(.white.opacity(0.85))
+                }
+                .toggleStyle(.switch)
+                .disabled(!store.syncAvailable)
+                Text(store.syncAvailable
+                     ? "Writes the session to iCloud Drive, which carries it to your other Macs running Clove. Last save wins. History and passwords do not sync."
+                     : "Turn on iCloud Drive in System Settings to use this.")
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             VStack(alignment: .leading, spacing: 6) {
                 FieldLabel(text: "SPACES AND APPEARANCE")
                 Text("Each space has its own icon, colours and light or dark setting. Right-click a space, or open it from the New menu, to change them.")

@@ -25,6 +25,15 @@ enum Support {
         FileManager.default.urls(for: directory, in: .userDomainMask)[0]
     }
 
+    /// The iCloud Drive folder for Clove, or nil when iCloud Drive is off. A plain path that
+    /// iCloud syncs on its own, which is as much cross-machine sync as an unsigned build can do.
+    static var iCloudDir: URL? {
+        let cloudDocs = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+        guard FileManager.default.fileExists(atPath: cloudDocs.path) else { return nil }
+        return cloudDocs.appendingPathComponent(folder)
+    }
+
     /// Runs once, before anything reads storage. Carries over app data, and the WebKit and cookie
     /// stores (keyed by bundle id) so sites stay signed in across the bundle-id change.
     static func migrateFromLegacy() {

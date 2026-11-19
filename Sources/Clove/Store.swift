@@ -98,6 +98,8 @@ final class BrowserStore: ObservableObject {
     @Published var appearance: Appearance = .system
     /// Offer to save and fill passwords.
     @Published var passwordsEnabled = true
+    /// Sync the session through iCloud Drive.
+    @Published var syncEnabled = false
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -184,6 +186,7 @@ final class BrowserStore: ObservableObject {
             if let engine = saved.searchEngine { searchEngine = engine }
             if let look = saved.appearance { appearance = look }
             if let pw = saved.passwordsEnabled { passwordsEnabled = pw }
+            if let sync = saved.syncEnabled { syncEnabled = sync }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -790,6 +793,13 @@ final class BrowserStore: ObservableObject {
         PasswordManager.shared.enabled = on
         scheduleSave()
     }
+
+    func setSync(_ on: Bool) {
+        syncEnabled = on
+        saveNow()  // write to iCloud at once when turning it on
+    }
+
+    var syncAvailable: Bool { Support.iCloudDir != nil }
 
     func setAppearance(_ value: Appearance) {
         appearance = value

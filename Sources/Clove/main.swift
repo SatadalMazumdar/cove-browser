@@ -213,6 +213,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             UserscriptStore.shared.scripts.removeAll { $0.name == "probe" }  // not saved, no file touched
             exit(source.contains("example.com") && source.contains("document.title") ? 0 : 1)
         }
+        if args.contains("--sync-check") {
+            let fm = FileManager.default
+            let local = fm.temporaryDirectory.appendingPathComponent("clove-l.json")
+            let cloud = fm.temporaryDirectory.appendingPathComponent("clove-c.json")
+            try? Data("old".utf8).write(to: local)
+            Thread.sleep(forTimeInterval: 1.1)
+            try? Data("new".utf8).write(to: cloud)
+            func mod(_ u: URL) -> Date { (try? fm.attributesOfItem(atPath: u.path)[.modificationDate] as? Date) ?? .distantPast }
+            let newerWins = mod(cloud) > mod(local)
+            print("iCloud available:", store.syncAvailable, "newer-wins works:", newerWins,
+                  "cloud path set:", SessionFile.cloudURL != nil)
+            try? fm.removeItem(at: local); try? fm.removeItem(at: cloud)
+            exit(newerWins ? 0 : 1)
+        }
         if args.contains("--drm-check") { runDRMCheck() }
         if args.contains("--inspector-check") {
             window.ignoresMouseEvents = true

@@ -55,6 +55,7 @@ private struct SavedSession: Codable {
     var searchEngine: SearchEngine? = nil
     var appearance: Appearance? = nil
     var passwordsEnabled: Bool? = nil
+    var syncEnabled: Bool? = nil
 }
 
 // MARK: - Version 1, read only
@@ -120,6 +121,7 @@ enum SessionFile {
         var searchEngine: SearchEngine?
         var appearance: Appearance?
         var passwordsEnabled: Bool?
+        var syncEnabled: Bool?
     }
 
     /// ~/Library/Application Support/Clove/session.json, unless CLOVE_SESSION_FILE points elsewhere.
@@ -130,8 +132,24 @@ enum SessionFile {
         return Support.file("session.json")
     }
 
+    /// The iCloud copy, when iCloud Drive is on and no test override is in effect.
+    static var cloudURL: URL? {
+        guard ProcessInfo.processInfo.environment["CLOVE_SESSION_FILE"] == nil else { return nil }
+        return Support.iCloudDir?.appendingPathComponent("session.json")
+    }
+
+    private static func modified(_ url: URL) -> Date {
+        (try? FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date) ?? .distantPast
+    }
+
     /// Returns nil on first launch, or when the file is unreadable. The caller then starts from the sample set.
     static func load() -> Loaded? {
+        // If a newer session is in iCloud, pull it down first, so this Mac picks up another's changes.
+        if let cloud = cloudURL, FileManager.default.fileExists(atPath: cloud.path),
+           modified(cloud) > modified(url), let cloudData = try? Data(contentsOf: cloud) {
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? cloudData.write(to: url, options: .atomic)
+        }
         guard let data = try? Data(contentsOf: url) else { return nil }
         let decoder = JSONDecoder()
         if let session = try? decoder.decode(SavedSession.self, from: data), !session.spaces.isEmpty {
@@ -181,7 +199,7 @@ enum SessionFile {
                       idleSeconds: session.idleSeconds, blockingEnabled: session.blockingEnabled,
                       zoomLevels: session.zoomLevels, unblockedHosts: session.unblockedHosts,
                       searchEngine: session.searchEngine, appearance: session.appearance,
-                      passwordsEnabled: session.passwordsEnabled)
+                      passwordsEnabled: session.passwordsEnabled, syncEnabled: session.syncEnabled)
     }
 
     static func save(_ store: BrowserStore) {
@@ -215,11 +233,18 @@ enum SessionFile {
             unblockedHosts: store.unblockedHosts.isEmpty ? nil : Array(store.unblockedHosts),
             searchEngine: store.searchEngine,
             appearance: store.appearance,
-            passwordsEnabled: store.passwordsEnabled
+            passwordsEnabled: store.passwordsEnabled,
+            syncEnabled: store.syncEnabled
         )
         do {
+            let data = try JSONEncoder().encode(session)
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(session).write(to: url, options: .atomic)
+            try data.write(to: url, options: .atomic)
+            // Push a copy to iCloud Drive, which syncs it to the user's other Macs.
+            if store.syncEnabled, let cloud = cloudURL {
+                try? FileManager.default.createDirectory(at: cloud.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? data.write(to: cloud, options: .atomic)
+            }
         } catch {
             NSLog("Clove could not save the session: \(error.localizedDescription)")
         }
