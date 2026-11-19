@@ -156,6 +156,11 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
 }
 
 extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        // Set the remembered zoom before the page paints, so there is no jump.
+        store?.applyZoom(to: self)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         refreshFavicon()
         if let profile { store?.history.record(url: url, title: title, host: host, profile: profile.id) }

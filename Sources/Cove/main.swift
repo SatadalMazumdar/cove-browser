@@ -223,6 +223,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .separator(),
             item("Find on Page", #selector(findOnPage), "f"),
             .separator(),
+            item("Zoom In", #selector(zoomIn), "="),
+            item("Zoom Out", #selector(zoomOut), "-"),
+            item("Actual Size", #selector(zoomReset), "0"),
+            .separator(),
             item("Reload", #selector(reload), "r"),
             item("Back", #selector(goBack), "["),
             item("Forward", #selector(goForward), "]"),
@@ -262,6 +266,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func copyURL() { store.copyURL() }
     @objc private func toggleSidebar() { store.sidebarVisible.toggle() }
     @objc private func findOnPage() { store.openFind() }
+    @objc private func zoomIn() { store.changeZoom(1) }
+    @objc private func zoomOut() { store.changeZoom(-1) }
+    @objc private func zoomReset() { store.changeZoom(0) }
     @objc private func reload() { store.selectedTab?.webView?.reload() }
     @objc private func goBack() { store.selectedTab?.webView?.goBack() }
     @objc private func goForward() { store.selectedTab?.webView?.goForward() }

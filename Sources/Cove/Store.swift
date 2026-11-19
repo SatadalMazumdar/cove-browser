@@ -59,6 +59,8 @@ final class BrowserStore: ObservableObject {
     @Published var fullScreen = false
     /// Ad and tracker blocking, on by default.
     @Published var blockingEnabled = true
+    /// Page zoom per host, remembered. 1.0 is actual size and is not stored.
+    @Published var zoomLevels: [String: Double] = [:]
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -136,6 +138,7 @@ final class BrowserStore: ObservableObject {
             sidebarVisible = saved.sidebarVisible
             if let seconds = saved.idleSeconds { idleSeconds = seconds }
             if let blocking = saved.blockingEnabled { blockingEnabled = blocking }
+            if let zoom = saved.zoomLevels { zoomLevels = zoom }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -726,6 +729,23 @@ final class BrowserStore: ObservableObject {
         ContentBlocker.shared.enabled = on
         applyBlocking()
         scheduleSave()
+    }
+
+    /// Zooms the current page. step +1 larger, -1 smaller, 0 back to actual size. Kept per host.
+    func changeZoom(_ step: Int) {
+        guard let tab = selectedTab, let webView = tab.webView else { return }
+        let host = tab.host
+        var zoom = zoomLevels[host] ?? 1.0
+        zoom = step == 0 ? 1.0 : max(0.5, min(3.0, (zoom + Double(step) * 0.1 * 10).rounded() / 10))
+        if abs(zoom - 1.0) < 0.001 { zoomLevels[host] = nil } else { zoomLevels[host] = zoom }
+        webView.pageZoom = zoom
+        scheduleSave()
+    }
+
+    /// Applies the remembered zoom for a tab's host, called when a page commits.
+    func applyZoom(to tab: BrowserTab) {
+        guard let webView = tab.webView else { return }
+        webView.pageZoom = zoomLevels[tab.host] ?? 1.0
     }
 
     /// Changes the tab-sleeping delay and runs a sweep so the new value takes effect at once.
