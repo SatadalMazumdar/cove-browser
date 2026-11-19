@@ -61,6 +61,8 @@ final class BrowserStore: ObservableObject {
     @Published var blockingEnabled = true
     /// Page zoom per host, remembered. 1.0 is actual size and is not stored.
     @Published var zoomLevels: [String: Double] = [:]
+    /// Hosts where blocking is turned off, even when blocking is on overall.
+    @Published var unblockedHosts: Set<String> = []
     @Published var commandBar: CommandBarMode?
     @Published var query = ""
     @Published var highlight = 0
@@ -139,6 +141,7 @@ final class BrowserStore: ObservableObject {
             if let seconds = saved.idleSeconds { idleSeconds = seconds }
             if let blocking = saved.blockingEnabled { blockingEnabled = blocking }
             if let zoom = saved.zoomLevels { zoomLevels = zoom }
+            if let hosts = saved.unblockedHosts { unblockedHosts = Set(hosts) }
             // Only the tab on screen loads at launch. The rest load when clicked.
             selectedTab?.ensureWebView()
             // Writes the file back in the current format when it was read from an older one.
@@ -717,18 +720,41 @@ final class BrowserStore: ObservableObject {
         panel = .settings
     }
 
-    /// Re-attaches or detaches the blocklist on every loaded page to match the current setting.
+    /// Whether blocking is on for a host: the overall setting, minus hosts turned off by the user.
+    func blockingOn(for host: String) -> Bool {
+        blockingEnabled && !unblockedHosts.contains(host)
+    }
+
+    /// Sets the rule list on one tab for a host. Called before a navigation so it takes effect
+    /// on that load, since content rules only apply to loads started after they are attached.
+    func applyBlocking(to tab: BrowserTab, host: String? = nil) {
+        guard let webView = tab.webView else { return }
+        ContentBlocker.shared.apply(to: webView, on: blockingOn(for: host ?? tab.host))
+    }
+
+    /// Re-applies on every loaded page, for the global toggle and the ready callback.
     func applyBlocking() {
-        for tab in everyTab {
-            if let webView = tab.webView { ContentBlocker.shared.apply(to: webView) }
-        }
+        for tab in everyTab { applyBlocking(to: tab) }
     }
 
     func setBlocking(_ on: Bool) {
         blockingEnabled = on
         ContentBlocker.shared.enabled = on
         applyBlocking()
+        reloadAll()
         scheduleSave()
+    }
+
+    /// Turns blocking off or back on for one host, then reloads that host's tabs to apply it.
+    func toggleBlocking(forHost host: String) {
+        if unblockedHosts.contains(host) { unblockedHosts.remove(host) } else { unblockedHosts.insert(host) }
+        applyBlocking()
+        for tab in everyTab where tab.webView != nil && tab.host == host { tab.webView?.reload() }
+        scheduleSave()
+    }
+
+    private func reloadAll() {
+        for tab in everyTab where tab.webView != nil { tab.webView?.reload() }
     }
 
     /// Zooms the current page. step +1 larger, -1 smaller, 0 back to actual size. Kept per host.

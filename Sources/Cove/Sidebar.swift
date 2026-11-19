@@ -418,7 +418,7 @@ private struct URLPill: View {
         .buttonStyle(.plain)
         .onHover { hover = $0 }
         .contextMenu {
-            if tab != nil {
+            if let tab {
                 Button("Copy URL", action: copy)
                 Button("Paste and Go") {
                     if let text = NSPasteboard.general.string(forType: .string) {
@@ -427,6 +427,12 @@ private struct URLPill: View {
                         store.submit()
                     }
                 }
+                Divider()
+                let host = tab.host
+                Button(store.blockingOn(for: host) ? "Turn Off Blocking for \(host)" : "Turn On Blocking for \(host)") {
+                    store.toggleBlocking(forHost: host)
+                }
+                .disabled(!store.blockingEnabled)
             }
         }
     }

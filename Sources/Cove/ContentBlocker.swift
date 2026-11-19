@@ -59,10 +59,10 @@ final class ContentBlocker {
         }
     }
 
-    /// Attaches or detaches the list on one page, to match the current setting.
-    func apply(to webView: WKWebView) {
+    /// Attaches or detaches the list on one page. The store decides `on` per host.
+    func apply(to webView: WKWebView, on: Bool) {
         let controller = webView.configuration.userContentController
         controller.removeAllContentRuleLists()
-        if enabled, let ruleList { controller.add(ruleList) }
+        if on, let ruleList { controller.add(ruleList) }
     }
 }

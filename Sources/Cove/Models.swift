@@ -65,8 +65,8 @@ final class BrowserTab: NSObject, ObservableObject, Identifiable {
         wv.allowsBackForwardNavigationGestures = true
         wv.allowsMagnification = true
         wv.isInspectable = true
-        ContentBlocker.shared.apply(to: wv)
         webView = wv
+        if let store { store.applyBlocking(to: self) } else { ContentBlocker.shared.apply(to: wv, on: ContentBlocker.shared.enabled) }
 
         wv.publisher(for: \.title).sink { [weak self] t in
             if let t, !t.isEmpty { self?.title = t }
@@ -211,6 +211,10 @@ extension BrowserTab: WKNavigationDelegate, WKUIDelegate {
         if navigationAction.shouldPerformDownload {
             decisionHandler(.download)
             return
+        }
+        // Set blocking for the destination host before the load, since rules only apply going forward.
+        if navigationAction.targetFrame?.isMainFrame ?? true, let host = navigationAction.request.url?.host {
+            store?.applyBlocking(to: self, host: host)
         }
         decisionHandler(.allow)
     }
