@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 
 VERSION="$(cat VERSION)"
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
-REPO="SatadalMazumdar/cove-browser"
+REPO="thedesignmvp/Clove-Browser"
 SPARKLE_KEY="9jiHTiEwpsrcW6vOBFY1CRvlRKXKFcOEduqp2xo0BmY="
 
 swift build -c release

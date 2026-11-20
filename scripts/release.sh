@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="$(cat VERSION)"
-REPO="SatadalMazumdar/cove-browser"
+REPO="thedesignmvp/Clove-Browser"
 OUT="build/release"
 DMG="$OUT/Clove-$VERSION.dmg"
 SPARKLE_BIN=".build/artifacts/sparkle/Sparkle/bin"
