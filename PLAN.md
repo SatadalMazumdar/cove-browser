@@ -60,8 +60,9 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ✅ Sparkle auto-update. The app checks an appcast attached to the latest GitHub release, and each DMG carries an EdDSA signature. Check for Updates is in the Clove menu.
 - ✅ Full rename and bundle-id migration. Everything internal is Clove now, the bundle id is `dev.clove.browser`, and a first-launch migration copies the old Cove app data plus the WebKit and cookie stores so tabs, history and logins carry over. The GitHub repo is still named `cove-browser`; renaming it is a separate step whenever you want the URL changed.
 - ✅ CI in `.github/workflows/release.yml`. A `v*` tag builds, signs, notarizes and publishes the DMG and appcast. It needs six repository secrets before the first tagged run.
-- ⬜ Passkeys. Sites that sign in with a passkey, such as Google, fail today, because a web view only runs passkey sign-in for any site when the app carries a restricted Apple entitlement. Until then, sign in with a password and a 2-step code. Steps:
-  1. The account holder for team 9VP2T98HX9 requests the web browser entitlement from Apple on the Developer site, which covers `com.apple.developer.web-browser.public-key-credential`.
+- 🟢 Passkeys. Sites that sign in with a passkey, such as Google, fail today, because a web view only runs passkey sign-in for any site when the app carries a restricted Apple entitlement. Until then, sign in with a password and a 2-step code. Steps:
+  0. Done: Clove declares the `http` and `https` schemes and opens links macOS hands to it, and the `v0.1.0` release gives Apple a build to download.
+  1. The account holder for team 9VP2T98HX9 requests the entitlement at https://developer.apple.com/contact/request/macos-browsers-passkeys/, which covers `com.apple.developer.web-browser.public-key-credential`.
   2. After approval, register the `dev.clove.browser` App ID with that capability and create a Developer ID provisioning profile for it.
   3. Add the entitlement to `Resources/Clove.entitlements`, and have `build.sh` copy the profile to `Contents/embedded.provisionprofile` before signing. Without the profile, macOS kills the app at launch.
   4. Add the profile as a CI secret so tagged releases carry it.
