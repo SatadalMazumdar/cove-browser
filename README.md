@@ -1,32 +1,102 @@
+<p align="center">
+  <img src="Resources/AppIcon-source.png" width="128" alt="Clove icon">
+</p>
+
 # Clove
 
-A prototype Mac browser with a sidebar layout, built in Swift on Safari's engine.
+Safari's engine, with the tab, bookmark and profile management Safari lacks.
 
-Clove is the name. The app is about 5,000 lines of Swift and builds in under a minute.
+Clove is a native Mac browser built on WebKit, the same engine Safari uses. Pages load and render
+the way they do in Safari, and they use about the same power. What changes is everything around
+the page: a sidebar that keeps tabs and bookmarks in order, spaces for separate parts of your day,
+and profiles that keep work and personal logins apart.
 
-## What it does
+[Download Clove for Mac](https://github.com/thedesignmvp/Clove-Browser/releases/latest). The DMG is
+3 MB, signed and notarized by Apple, and needs macOS 14 or later.
 
-- Sidebar with favorites, pinned tabs, nested folders and today's tabs. The page sits in a rounded card.
-- Spaces with their own name, icon, colours and light or dark setting.
-- Profiles. A space either gets its own cookies and logins or shares another space's. Favorites belong to the profile.
-- Create, edit, delete and reorder spaces. Create, rename and delete folders.
-- Drag tabs and folders to reorder them, into folders, onto favorites, or onto another space's icon.
-- Import from Arc: spaces, themes, icons, profiles, favorites, pinned tabs, folders and browsing history. Logins and passwords do not come over.
-- Two-finger swipe on the sidebar moves between spaces. The window tint blends as you swipe.
-- Command bar for search, addresses, history and switching to an open tab, with a keyboard-driven active-tabs view.
-- Ad and tracker blocking, global and per site.
+## Why not just Safari
+
+Safari is fast and easy on the battery, and it gets unwieldy past twenty tabs. Clove keeps the first
+part and fixes the second.
+
+### Tabs
+
+- Tabs live in a vertical sidebar, so you read full titles, not slivers.
+- Pinned tabs stay put. Today's tabs sit below them and are easy to clear.
+- Drag tabs to reorder them, into folders, or onto another space.
+- Cmd+T opens a command bar that searches open tabs, history and the web from one field.
+- An active-tabs view lists everything open, and works from the keyboard alone.
+- Split view shows two pages side by side. A mini window opens a link without losing your place.
+
+### Bookmarks
+
+- Favorites sit in a grid at the top of the sidebar, one click away.
+- Pinned tabs work as bookmarks that remember where you left off.
+- Folders nest, and collapse when you want them out of sight.
+
+### Profiles and spaces
+
+- A space has its own name, icon, colours and set of tabs. Swipe two fingers on the sidebar to move between them.
+- A profile has its own cookies and logins. Give a space its own profile, or share one across several.
+- Sign in to two accounts on the same site, one per profile, with no private windows.
+
+### Light on memory and battery
+
+- WebKit is the engine Apple tunes for Mac hardware, so Clove gets Safari's power use for page work.
+- Background tabs unload after an idle timeout you choose, and reload when you click them.
+- The built-in blocker stops ads and trackers before they load, which cuts network and CPU work.
+- The app itself is small: about 6,000 lines of Swift, no Electron, no bundled engine.
+
+## More
+
+- Import from Arc: spaces, themes, icons, profiles, favorites, pinned tabs, folders and history.
+- A password manager that saves logins to the Mac keychain and fills them in.
+- Reader mode, find on page, per-site zoom and picture in picture.
 - Downloads with progress and show-in-Finder.
-- Find on page, reader mode, per-site zoom and picture in picture.
-- Settings for tab sleeping, search engine and a light or dark override.
-- Background tabs unload after an idle timeout and reload when clicked.
-- Tabs, history and scroll position are saved between launches.
-- Safari's Web Inspector.
+- Userscripts, for custom JavaScript on the sites you pick.
+- Session sync through iCloud Drive.
+- Automatic updates.
+- Native full screen, a floating sidebar, and Safari's Web Inspector.
 
-## Build and run
+## Shortcuts
 
-Needs macOS 14 or later and the Xcode Command Line Tools. Xcode itself is not required.
+| Keys | Action |
+|---|---|
+| Cmd+T | New tab, and the command bar |
+| Cmd+L | Edit the current address |
+| Cmd+W | Close tab |
+| Cmd+S | Show or hide the sidebar |
+| Cmd+D | Pin or unpin tab |
+| Cmd+F | Find on page |
+| Cmd+Shift+C | Copy the page address |
+| Cmd+Shift+R | Reader mode |
+| Cmd+Shift+P | Picture in picture |
+| Cmd+Shift+O | Open the page in a mini window |
+| Cmd+plus, minus, 0 | Zoom in, zoom out, actual size |
+| Cmd+Option+Up, Down | Previous or next tab |
+| Cmd+Option+Left, Right | Previous or next space |
+| Ctrl+1 to Ctrl+9 | Jump to a space |
+| Cmd+Shift+N | New folder |
+| Cmd+Ctrl+N | New space |
+| Cmd+Ctrl+F | Full screen |
+| Cmd+Option+I | Web Inspector |
+
+## Known gaps
+
+- Passkeys do not work yet. Apple has to grant a browser entitlement first, and the request is in. Sign in with a password and a 2-step code for now.
+- Clove cannot read passwords saved in Apple's Passwords app. Apple reserves those for Safari. Clove fills only the logins you save in Clove.
+- No Safari or Chrome extensions. Userscripts cover simple cases.
+- Sync covers the session only, not history or passwords, and the newest save wins.
+- Sites that need Widevine DRM will not play video. WebKit supports FairPlay only.
+- Chrome DevTools cannot attach, because the engine is WebKit.
+
+## Build from source
+
+You need macOS 14 or later and the Xcode Command Line Tools. Xcode itself is not required.
 
 ```sh
+git clone https://github.com/thedesignmvp/Clove-Browser.git
+cd Clove-Browser
 ./build.sh
 open build/Clove.app
 ```
@@ -56,30 +126,6 @@ xcrun notarytool store-credentials clove-notary --apple-id <id> --team-id <team>
 scripts/release.sh
 ```
 
-## Shortcuts
-
-| Keys | Action |
-|---|---|
-| Cmd+T | New tab |
-| Cmd+L | Edit the current address |
-| Cmd+W | Close tab |
-| Cmd+S | Show or hide the sidebar |
-| Cmd+D | Pin or unpin tab |
-| Cmd+Shift+C | Copy the page address |
-| Cmd+Option+Up, Down | Previous or next tab |
-| Cmd+Option+Left, Right | Previous or next space |
-| Ctrl+1 to Ctrl+9 | Jump to a space |
-| Cmd+Shift+N | New folder |
-| Cmd+Ctrl+N | New space |
-| Cmd+Option+I | Web Inspector |
-
-## Known gaps
-
-- No extensions, password manager or split view yet.
-- Arc split views import as separate tabs.
-- Chrome DevTools and tools built on Chrome's debugging protocol cannot attach, because the engine is WebKit.
-- The Web Inspector and the audio check used by tab unloading call private WebKit properties.
-
 ## Where things are
 
 - `Sources/Clove/Models.swift` holds tabs, folders, profiles and spaces.
@@ -87,12 +133,14 @@ scripts/release.sh
 - `Sources/Clove/Session.swift` reads and writes the session file, and upgrades the older format.
 - `Sources/Clove/ArcImport.swift` reads Arc's sidebar file.
 - `Sources/Clove/Sidebar.swift` is the sidebar.
-- `Sources/Clove/Panels.swift` is the space editor and the import screen.
+- `Sources/Clove/Panels.swift` is the space editor, the import screen and Settings.
 - `Sources/Clove/ContentView.swift` is the window layout and the page card.
 - `Sources/Clove/CommandBar.swift` is the command bar.
 - `Sources/Clove/main.swift` is the app start, the menu and the diagnostic flags.
 
 The session is stored at `~/Library/Application Support/Clove/session.json`.
+
+[PLAN.md](PLAN.md) tracks what is built and what is left.
 
 ## Licence
 
