@@ -241,6 +241,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 }
             }
         }
+        if let flag = args.firstIndex(of: "--demo"), args.indices.contains(flag + 1) {
+            runDemo(scene: args[flag + 1])
+        }
         if let flag = args.firstIndex(of: "--snapshot"), args.indices.contains(flag + 1) {
             let path = args[flag + 1]
             window.ignoresMouseEvents = true
@@ -545,6 +548,81 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         print(failures == 0 ? "all checks passed" : "\(failures) checks failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    /// `--demo <scene>` stages the sample window for README screenshots and the tour recording.
+    /// It prints the window number, so `screencapture -l` can grab exactly this window.
+    /// Scenes: main, command, work, split, settings, editor, peek, zoom, tour.
+    private func runDemo(scene: String) {
+        window.ignoresMouseEvents = true
+        window.level = .floating
+        window.setFrame(NSRect(x: 80, y: 120, width: 1280, height: 800), display: true)
+        print("window", window.windowNumber)
+        fflush(stdout)
+
+        var clock = 0.0
+        func after(_ gap: Double, _ step: @escaping () -> Void) {
+            clock += gap
+            DispatchQueue.main.asyncAfter(deadline: .now() + clock) { step() }
+        }
+        func type(_ text: String) {
+            for index in text.indices {
+                after(0.12) { self.store.query = String(text[...index]) }
+            }
+        }
+        let store = self.store
+        func secondTab() -> BrowserTab? {
+            store.space.allTabs.first { $0.title == "Hacker News" } ?? store.space.allTabs.first { $0 !== store.selectedTab }
+        }
+
+        switch scene {
+        case "command":
+            after(4) { store.openCommandBar(.newTab) }
+            type("web")
+        case "work":
+            after(1) { store.switchSpace(to: 1) }
+            after(0.5) { store.selectedTab?.webView?.load(URLRequest(url: URL(string: "https://developer.apple.com/swift/")!)) }
+        case "split":
+            after(1) { if let tab = secondTab() { store.splitWith(tab) } }
+        case "settings":
+            after(4) { store.openSettings() }
+        case "editor":
+            after(4) { store.openSpaceEditor(editing: store.space) }
+        case "peek":
+            after(1) { store.sidebarVisible = false }
+            after(3) { store.peeking = true }
+        case "zoom":
+            after(5) { store.changeZoom(1) }
+            after(0.3) { store.changeZoom(1) }
+        case "tour":
+            // Warm up first, so every page in the tour is already loaded. The recorder starts
+            // after the warm-up and stops before the app quits.
+            func tab(_ title: String) -> BrowserTab? { store.space.allTabs.first { $0.title.hasPrefix(title) } }
+            let home = store.selectedTab
+            after(0.5) { if let tab = tab("Hacker News") { store.select(tab) } }
+            after(1.5) { store.switchSpace(to: 1) }
+            after(2.0) { store.switchSpace(to: 0); if let home { store.select(home) } }
+            // Recording starts here, at about nine seconds in.
+            after(4.5) { store.openCommandBar(.newTab) }
+            type("webkit")
+            after(1.6) { store.closeCommandBar(); store.query = "" }
+            after(0.8) { if let tab = tab("Hacker News") { store.select(tab) } }
+            after(1.6) { if let home { store.select(home) } }
+            after(1.2) { store.switchSpace(to: 1) }
+            after(2.2) { store.switchSpace(to: 0) }
+            after(1.6) { if let tab = tab("Hacker News") { store.splitWith(tab) } }
+            after(2.8) { store.closeSplit() }
+            after(1.0) { store.sidebarVisible = false }
+            after(1.4) { store.peeking = true }
+            after(2.0) { store.peeking = false }
+            after(0.8) { store.sidebarVisible = true }
+            after(1.2) { store.openSettings() }
+            after(2.8) { store.closePanel() }
+            after(8.0) { exit(0) }
+        default:
+            break
+        }
+        if scene != "tour" { after(scene == "main" ? 14 : 12) { exit(0) } }
     }
 
     /// `--snapshot <path>` writes a PNG of the window and quits. Used to check layout without a human.

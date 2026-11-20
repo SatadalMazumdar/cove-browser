@@ -11,8 +11,16 @@ the way they do in Safari, and they use about the same power. What changes is ev
 the page: a sidebar that keeps tabs and bookmarks in order, spaces for separate parts of your day,
 and profiles that keep work and personal logins apart.
 
+![Clove with the sidebar, favorites, pinned tabs and a page](docs/images/main.png)
+
 [Download Clove for Mac](https://github.com/thedesignmvp/Clove-Browser/releases/latest). The DMG is
 3 MB, signed and notarized by Apple, and needs macOS 14 or later.
+
+## A quick tour
+
+The command bar, tab switching, spaces, split view, the floating sidebar and Settings, in 25 seconds.
+
+![A tour of Clove](docs/images/tour.gif)
 
 ## Why not just Safari
 
@@ -28,6 +36,10 @@ part and fixes the second.
 - An active-tabs view lists everything open, and works from the keyboard alone.
 - Split view shows two pages side by side. A mini window opens a link without losing your place.
 
+![The command bar searching open tabs](docs/images/command.png)
+
+![Two pages side by side in split view](docs/images/split.png)
+
 ### Bookmarks
 
 - Favorites sit in a grid at the top of the sidebar, one click away.
@@ -40,12 +52,18 @@ part and fixes the second.
 - A profile has its own cookies and logins. Give a space its own profile, or share one across several.
 - Sign in to two accounts on the same site, one per profile, with no private windows.
 
+![A second space with its own colour, tabs and profile](docs/images/work.png)
+
+![The space editor with icon, colour and profile](docs/images/editor.png)
+
 ### Light on memory and battery
 
 - WebKit is the engine Apple tunes for Mac hardware, so Clove gets Safari's power use for page work.
 - Background tabs unload after an idle timeout you choose, and reload when you click them.
 - The built-in blocker stops ads and trackers before they load, which cuts network and CPU work.
 - The app itself is small: about 6,000 lines of Swift, no Electron, no bundled engine.
+
+![Settings for tab sleeping, blocking, passwords and sync](docs/images/settings.png)
 
 ## More
 
@@ -57,6 +75,10 @@ part and fixes the second.
 - Session sync through iCloud Drive.
 - Automatic updates.
 - Native full screen, a floating sidebar, and Safari's Web Inspector.
+
+| The sidebar hides and floats in when you need it | Zoom shows the percentage and a reset |
+|---|---|
+| ![The floating sidebar](docs/images/peek.png) | ![The zoom readout](docs/images/zoom.png) |
 
 ## Shortcuts
 

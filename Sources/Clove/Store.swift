@@ -674,17 +674,20 @@ final class BrowserStore: ObservableObject {
     func switchSpace(to index: Int) {
         guard spaces.indices.contains(index) else { return }
         selectedTab?.lastActive = Date()
+        // Get the target space ready before the switch publishes, so the window never draws
+        // it with no tab or no web view. Doing this after left a blank card on a first visit.
+        let target = spaces[index]
+        // A space opened for the first time shows its newest tab, not an empty card.
+        if target.selected == nil, let first = target.today.first ?? target.ownTabs.first {
+            target.selected = first
+        }
+        // The space's tab may have been unloaded while the space was off screen.
+        target.selected?.lastActive = Date()
+        target.selected?.ensureWebView()
         withAnimation(.spring(response: 0.36, dampingFraction: 0.86)) {
             pagePosition = Double(index)
             spaceIndex = index
         }
-        // A space opened for the first time shows its newest tab, not an empty card.
-        if space.selected == nil, let first = space.today.first ?? space.ownTabs.first {
-            space.selected = first
-        }
-        // The space's tab may have been unloaded while the space was off screen.
-        space.selected?.lastActive = Date()
-        space.selected?.ensureWebView()
         focusWeb()
         scheduleSave()
     }
