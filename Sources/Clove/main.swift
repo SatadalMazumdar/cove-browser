@@ -254,6 +254,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    /// Links that macOS hands to Clove, from another app or as the default browser, open as new tabs.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "") {
+            _ = store.newTab(url: url)
+        }
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         store.saveNow()
     }

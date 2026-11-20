@@ -54,6 +54,19 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSAppTransportSecurity</key>
     <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>Web site URL</string>
+        <key>CFBundleTypeRole</key><string>Viewer</string>
+        <key>CFBundleURLSchemes</key><array><string>http</string><string>https</string></array>
+    </dict></array>
+    <key>CFBundleDocumentTypes</key>
+    <array><dict>
+        <key>CFBundleTypeName</key><string>HTML document</string>
+        <key>CFBundleTypeRole</key><string>Viewer</string>
+        <key>LSHandlerRank</key><string>Alternate</string>
+        <key>LSItemContentTypes</key><array><string>public.html</string><string>public.xhtml</string></array>
+    </dict></array>
     <key>UTExportedTypeDeclarations</key>
     <array><dict>
         <key>UTTypeIdentifier</key><string>dev.clove.browser.item</string>
