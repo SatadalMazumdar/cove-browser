@@ -7,12 +7,12 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 
 ## Overall
 
-`███████████████████░` 35 / 36 done (97%)
+`███████████████████░` 35 / 37 done (95%)
 
 - Foundation: 15 / 15 ✅
 - Near-term features: 10 / 10 ✅
 - Bigger features: 5 / 5 ✅
-- Distribution and shipping: 5 / 6
+- Distribution and shipping: 5 / 7
 
 ## Foundation
 
@@ -60,6 +60,12 @@ Legend: ✅ done · 🟢 in progress or up next · ⬜ not started
 - ✅ Sparkle auto-update. The app checks an appcast attached to the latest GitHub release, and each DMG carries an EdDSA signature. Check for Updates is in the Clove menu.
 - ✅ Full rename and bundle-id migration. Everything internal is Clove now, the bundle id is `dev.clove.browser`, and a first-launch migration copies the old Cove app data plus the WebKit and cookie stores so tabs, history and logins carry over. The GitHub repo is still named `cove-browser`; renaming it is a separate step whenever you want the URL changed.
 - ✅ CI in `.github/workflows/release.yml`. A `v*` tag builds, signs, notarizes and publishes the DMG and appcast. It needs six repository secrets before the first tagged run.
+- ⬜ Passkeys. Sites that sign in with a passkey, such as Google, fail today, because a web view only runs passkey sign-in for any site when the app carries a restricted Apple entitlement. Until then, sign in with a password and a 2-step code. Steps:
+  1. The account holder for team 9VP2T98HX9 requests the web browser entitlement from Apple on the Developer site, which covers `com.apple.developer.web-browser.public-key-credential`.
+  2. After approval, register the `dev.clove.browser` App ID with that capability and create a Developer ID provisioning profile for it.
+  3. Add the entitlement to `Resources/Clove.entitlements`, and have `build.sh` copy the profile to `Contents/embedded.provisionprofile` before signing. Without the profile, macOS kills the app at launch.
+  4. Add the profile as a CI secret so tagged releases carry it.
+  5. Test a passkey sign-in on Google and confirm the Touch ID prompt appears.
 - ⬜ Landing page with the logo, a download button and the feature list
 
 ## Suggested order
